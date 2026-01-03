@@ -1,0 +1,8 @@
+{
+  "name": "cloud-shop-system",
+  "version": "1.0.0",
+  "dependencies": {
+    "firebase-admin": "^11.11.0",
+    "node-fetch": "^2.6.7"
+  }
+}
