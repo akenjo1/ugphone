@@ -50,8 +50,8 @@
     </nav>
 
     <!-- Error Box -->
-    <div id="errorBox" class="hidden max-w-4xl mx-auto m-4 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg shadow-lg">
-        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> LỖI</h3>
+    <div id="errorBox" class="hidden max-w-4xl mx-auto m-4 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg shadow-lg z-[60] relative">
+        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> LỖI ĐĂNG NHẬP</h3>
         <p id="errorMsg" class="font-mono text-xs break-all"></p>
         <button onclick="this.parentElement.classList.add('hidden')" class="mt-2 text-xs underline">Đóng</button>
     </div>
@@ -175,11 +175,13 @@
         let currentUser = null;
         let unsubscribeBalance = null;
         let previousBalance = -1;
-        let toastTimeout = null; // Biến để quản lý thời gian hiển thị thông báo
+        let toastTimeout = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('currentDomain').innerText = window.location.hostname;
-            auth.getRedirectResult().catch(handleLoginError);
+            
+            // Xóa bỏ getRedirectResult vì chúng ta quay lại dùng Popup
+            // auth.getRedirectResult().catch(handleLoginError);
 
             auth.onAuthStateChanged(user => {
                 if (user) {
@@ -216,18 +218,38 @@
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
 
+        // --- HÀM LOGIN ĐÃ SỬA VỀ POPUP ---
         function loginGoogle() {
             const btn = document.getElementById('btnLogin');
-            if(btn) btn.innerHTML = '...';
+            if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang mở...';
+            
             const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithRedirect(provider).catch(handleLoginError);
+            // Quay lại dùng signInWithPopup để dễ debug và tránh lỗi loop
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    // Thành công sẽ tự vào onAuthStateChanged
+                })
+                .catch((error) => {
+                    handleLoginError(error);
+                    if(btn) btn.innerHTML = '<i class="fa-brands fa-google text-red-500"></i> Đăng nhập';
+                });
         }
+
         function handleLoginError(error) {
+            console.error("Login Fail:", error);
             let userMsg = error.message;
-            if (error.code === 'auth/unauthorized-domain') userMsg = `Domain "${window.location.hostname}" chưa được phép.`;
+            if (error.code === 'auth/unauthorized-domain') {
+                userMsg = `LỖI DOMAIN: Hãy thêm "${window.location.hostname}" vào Firebase Console -> Auth -> Authorized Domains.`;
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                userMsg = "Bạn đã đóng cửa sổ đăng nhập.";
+            } else if (error.code === 'auth/popup-blocked') {
+                userMsg = "Trình duyệt đang chặn cửa sổ bật lên (Popup). Hãy cho phép Popup.";
+            }
             showError(userMsg);
         }
+
         function logout() { auth.signOut(); }
+        
         function toggleUI(isLoggedIn) {
             const ids = ['authBtn', 'welcomeBanner'];
             const userIds = ['userPanel', 'earnSection', 'shopSection'];
@@ -313,21 +335,16 @@
             val === 'UG' ? svDiv.classList.remove('hidden') : svDiv.classList.add('hidden');
         }
 
-        // --- HÀM SHOW TOAST ĐÃ SỬA ---
         function showToast(title, msg, type) {
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toastIcon');
             const tTitle = document.getElementById('toastTitle');
-            const tMsg = document.getElementById('toastMessage') || document.getElementById('toastMsg'); // Fallback
+            const tMsg = document.getElementById('toastMsg');
 
-            // Set nội dung
             tTitle.innerText = title;
             tMsg.innerText = msg;
-
-            // Xóa class cũ
             toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 transition-all duration-500 z-50 max-w-sm flex items-start gap-3`;
             
-            // Set màu
             if(type === 'success') {
                 toast.classList.add('border-green-500');
                 icon.innerHTML = '<i class="fa-solid fa-check-circle text-green-500 text-xl"></i>';
@@ -339,18 +356,12 @@
                 icon.innerHTML = '<i class="fa-solid fa-circle-info text-yellow-500 text-xl"></i>';
             }
 
-            // HIỆN TOAST
-            // Xóa các class ẩn (translate/opacity)
             toast.classList.remove('translate-y-32', 'opacity-0');
             
-            // LOGIC TIME OUT 5s
-            // Nếu đang có bộ đếm cũ thì xóa đi (tránh bị tắt oan)
             if (toastTimeout) clearTimeout(toastTimeout);
-
-            // Set bộ đếm mới 5 giây
             toastTimeout = setTimeout(() => {
                 toast.classList.add('translate-y-32', 'opacity-0');
-            }, 5000); // 5000ms = 5 giây
+            }, 5000);
         }
     </script>
 </body>
