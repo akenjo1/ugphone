@@ -11,6 +11,18 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        /* Hiệu ứng khi tiền về */
+        @keyframes coin-pop {
+            0% { transform: scale(1); color: #FACC15; } /* Màu vàng gốc */
+            50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } /* Phóng to + Màu xanh */
+            100% { transform: scale(1); color: #FACC15; }
+        }
+        .money-update {
+            animation: coin-pop 0.5s ease-in-out;
+        }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
@@ -28,10 +40,10 @@
             </div>
 
             <div id="userPanel" class="hidden flex items-center gap-3">
-                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2">
+                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2 transition-all duration-300" id="balanceContainer">
                     <i class="fa-solid fa-coins text-yellow-400"></i>
-                    <!-- ID userBalance để hiển thị số dư -->
-                    <span id="userBalance" class="font-bold text-yellow-400 text-sm">Loading...</span>
+                    <!-- Số dư -->
+                    <span id="userBalance" class="font-bold text-yellow-400 text-sm transition-all">0</span>
                 </div>
                 <img id="userAvatar" src="" class="w-8 h-8 rounded-full border-2 border-slate-600">
                 <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-1">
@@ -114,6 +126,7 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
+                
                 <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
                     <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
                 </button>
@@ -146,6 +159,7 @@
 
         let currentUser = null;
         let unsubscribeBalance = null;
+        let previousBalance = -1; // Để theo dõi thay đổi
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('currentDomain').innerText = window.location.hostname;
@@ -157,27 +171,34 @@
                     toggleUI(true);
                     document.getElementById('userAvatar').src = user.photoURL;
                     
-                    // --- LOGIC LẮNG NGHE SỐ DƯ (Đã sửa) ---
                     if(unsubscribeBalance) unsubscribeBalance();
                     
+                    // --- TỰ ĐỘNG CẬP NHẬT SỐ DƯ (REALTIME) ---
                     unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot((doc) => {
+                        const balEl = document.getElementById('userBalance');
+                        const balContainer = document.getElementById('balanceContainer');
+                        
+                        let balance = 0;
                         if (doc.exists) {
-                            const data = doc.data();
-                            const balance = data.balance !== undefined ? data.balance : 0;
-                            
-                            // Log ra console để kiểm tra
-                            console.log("Số dư mới nhận được:", balance);
-                            
-                            // Cập nhật lên màn hình ngay lập tức (Không dùng animation)
-                            document.getElementById('userBalance').innerText = balance;
-                        } else {
-                            // Nếu user chưa có trong database, set là 0
-                            document.getElementById('userBalance').innerText = "0";
-                            console.log("User chưa có dữ liệu trong DB");
+                            balance = doc.data().balance || 0;
                         }
-                    }, (error) => {
-                        console.error("Lỗi lắng nghe số dư:", error);
-                        // Nếu lỗi permission thì thường do Firebase Rules
+
+                        // Cập nhật số
+                        balEl.innerText = balance;
+
+                        // Nếu số dư thay đổi (khác lần trước) -> Chạy hiệu ứng
+                        if (previousBalance !== -1 && balance !== previousBalance) {
+                            // Reset animation
+                            balEl.classList.remove('money-update');
+                            void balEl.offsetWidth; // Trigger reflow
+                            balEl.classList.add('money-update');
+                            
+                            // Nếu được cộng tiền -> Hiện Toast báo
+                            if(balance > previousBalance) {
+                                showToast('Ting ting!', `+${balance - previousBalance} Xu`, 'success');
+                            }
+                        }
+                        previousBalance = balance;
                     });
 
                 } else {
@@ -246,7 +267,7 @@
                 if(data.success) { 
                     showToast('Thành công', data.message, 'success'); 
                     document.getElementById('promoCode').value = '';
-                    // Web sẽ tự cập nhật số dư nhờ onSnapshot
+                    // Không cần làm gì thêm, onSnapshot sẽ tự cập nhật số dư
                 } else { 
                     showToast('Lỗi', data.error, 'error'); 
                 }
@@ -259,7 +280,6 @@
             const inputData = document.getElementById('inputData').value;
             if(!inputData) return showToast('Thiếu tin', 'Nhập dữ liệu', 'warning');
             
-            // Lấy giá trị thực tế
             const currentBal = parseInt(document.getElementById('userBalance').innerText) || 0;
             if(currentBal < 50) return showToast('Thiếu Xu', 'Cần 50 Xu', 'error');
             
