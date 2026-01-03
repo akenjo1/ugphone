@@ -1,57 +1,68 @@
+const { db, admin } = require('./lib/firebaseAdmin');
+const fetch = require('node-fetch');
+
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ code: 405, msg: 'Method not allowed' });
-    }
+    if (req.method !== 'POST') return res.status(405).json({error: 'Method Not Allowed'});
 
-    const MY_HIDDEN_TOKEN = process.env.HOANG_CLOUD_TOKEN;
+    const { uid, cloud_id, server, input_data } = req.body;
+    const MACHINE_PRICE = 500; // Giá máy
+    const HOANG_TOKEN = process.env.HOANG_CLOUD_TOKEN;
 
-    if (!MY_HIDDEN_TOKEN) {
-        return res.status(500).json({ code: 500, msg: "Lỗi cấu hình hệ thống (Thiếu Token)" });
-    }
+    if (!uid) return res.status(401).json({ error: "Chưa đăng nhập" });
 
-    const { cloud_id, server, input_data } = req.body;
-
-    const payload = {
-        user_token: MY_HIDDEN_TOKEN,
-        cloud_id,
-        server,
-        input_data
-    };
+    const userRef = db.collection('users').doc(uid);
 
     try {
-        // 1. Gọi âm thầm đến nhà cung cấp gốc
-        const response = await fetch('https://hoang.cloud/dev/buy_device_cloud', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+        // BƯỚC 1: Trừ tiền trong Database (Transaction)
+        await db.runTransaction(async (t) => {
+            const doc = await t.get(userRef);
+            const balance = doc.data()?.balance || 0;
+            if (balance < MACHINE_PRICE) {
+                throw new Error(`Bạn không đủ Xu. Cần ${MACHINE_PRICE} Xu.`);
+            }
+            t.update(userRef, { balance: balance - MACHINE_PRICE });
         });
 
-        // 2. Lấy dữ liệu gốc
-        const rawData = await response.json();
-
-        // 3. XỬ LÝ ẨN DANH (QUAN TRỌNG)
-        // Chúng ta không trả về rawData, mà tự tạo object mới
+        // BƯỚC 2: Gọi API Mua máy (Ẩn Token server-side)
+        // Người dùng không biết bạn gọi đi đâu
+        const payload = { user_token: HOANG_TOKEN, cloud_id, server, input_data };
         
-        if (rawData.success) {
-            // Nếu thành công -> Trả về thông báo chung chung
-            return res.status(200).json({
-                success: true,
-                // Tự viết lại thông báo, không dùng thông báo của họ
-                message: "Hệ thống đã tiếp nhận đơn hàng. Đang khởi tạo máy..." 
+        let apiSuccess = false;
+        let apiMessage = "";
+
+        try {
+            const response = await fetch('https://hoang.cloud/dev/buy_device_cloud', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
+            const result = await response.json();
+            
+            if (result.success) {
+                apiSuccess = true;
+                apiMessage = result.message;
+            } else {
+                apiMessage = result.message;
+            }
+        } catch (err) {
+            apiMessage = "Lỗi kết nối đến nhà cung cấp.";
+        }
+
+        // BƯỚC 3: Xử lý kết quả
+        if (apiSuccess) {
+            return res.status(200).json({ success: true, message: "Mua thành công! " + apiMessage });
         } else {
-            // Nếu thất bại -> Trả về lỗi chung chung hoặc map lại lỗi
-            // Ví dụ: họ trả về "Token sai", mình báo "Lỗi xác thực"
-            return res.status(400).json({
-                success: false,
-                message: "Không thể tạo máy lúc này. Vui lòng thử lại sau."
-                // Ta có thể log lỗi thật ra console của Vercel để mình tự xem, chứ ko gửi cho khách
-                // debug_info: rawData.message (Xóa dòng này khi chạy thật)
+            // Mua thất bại -> HOÀN TIỀN LẠI
+            await userRef.update({ 
+                balance: admin.firestore.FieldValue.increment(MACHINE_PRICE) 
+            });
+            return res.status(400).json({ 
+                success: false, 
+                message: "Lỗi khởi tạo: " + apiMessage + ". Đã hoàn lại 500 Xu vào tài khoản." 
             });
         }
 
-    } catch (error) {
-        // Lỗi mạng hoặc server sập
-        res.status(500).json({ success: false, message: "Hệ thống đang bảo trì." });
+    } catch (e) {
+        return res.status(400).json({ success: false, message: e.message });
     }
 }
