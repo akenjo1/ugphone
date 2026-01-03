@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dịch Vụ Cloud Phone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <div class="text-center space-y-2 mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-500"><i class="fa-solid fa-cloud"></i> Dịch Vụ Cloud Phone</h1>
+            <p class="text-gray-400 text-sm">Hệ thống cấp phát Cloud Phone tự động</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Check Status Section -->
+            <div class="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700 h-full flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-white"><i class="fa-solid fa-signal text-green-400 mr-2"></i> Trạng thái Server</h2>
+                    <button onclick="checkStatus()" id="btnCheck" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition shadow">
+                        <i class="fa-solid fa-rotate-right"></i> Làm mới
+                    </button>
+                </div>
+                
+                <div id="statusResult" class="grid grid-cols-1 gap-3 flex-grow content-start">
+                    <p class="text-gray-500 text-center italic py-4">Nhấn làm mới để xem trạng thái.</p>
+                </div>
+            </div>
+
+            <!-- Buy Device Section -->
+            <div class="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
+                <h2 class="text-xl font-semibold text-white mb-4"><i class="fa-solid fa-cart-shopping text-yellow-400 mr-2"></i> Mua Cloud Trial</h2>
+                
+                <div class="space-y-4">
+                    <!-- Cloud Type -->
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Loại Cloud</label>
+                        <select id="cloudId" onchange="handleCloudChange()" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="UG">UGPhone (UG)</option>
+                            <option value="VS">Vsphone (VS)</option>
+                            <option value="VM">Vmos Cloud (VM)</option>
+                        </select>
+                    </div>
+
+                    <!-- Server (Only for UG) -->
+                    <div id="serverContainer">
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Khu vực (Server)</label>
+                        <select id="serverRegion" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="SG">Singapore (SG)</option>
+                            <option value="HK">Hong Kong (HK)</option>
+                            <option value="JP">Japan (JP)</option>
+                            <option value="DE">Germany (DE)</option>
+                            <option value="US">America (US)</option>
+                        </select>
+                    </div>
+
+                    <!-- Input Data -->
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Dữ liệu đầu vào <span id="inputTypeHint" class="text-blue-400 text-[10px] ml-1"></span></label>
+                        <textarea id="inputData" rows="3" 
+                            class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 text-sm focus:ring-blue-500 focus:border-blue-500"
+                            placeholder=""></textarea>
+                    </div>
+
+                    <button onclick="buyDevice()" id="btnBuy" class="w-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-3 text-center transition-all shadow-lg transform active:scale-95">
+                        <i class="fa-solid fa-bolt"></i> Tạo Máy Ngay
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Section -->
+        <div class="bg-gray-900 rounded-xl border border-gray-700 p-4">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-sm font-semibold text-gray-400">Kết quả xử lý</h3>
+                <button onclick="clearLogs()" class="text-xs text-gray-500 hover:text-white">Xóa</button>
+            </div>
+            <div id="logs" class="h-40 overflow-y-auto font-mono text-xs p-2 bg-black rounded border border-gray-800 space-y-1">
+                <div class="text-gray-600">> Ready...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white px-6 py-4 rounded-lg shadow-2xl border-l-4 border-blue-500 transform translate-y-20 opacity-0 transition-all duration-300 z-50 max-w-sm">
+        <div class="font-bold mb-1" id="toastTitle"></div>
+        <div class="text-sm text-gray-300" id="toastMessage"></div>
+    </div>
+
+    <script>
+        // Gọi đến API của chính trang web này (Vercel Functions)
+        // Không gọi trực tiếp đến hoang.cloud
+        const API_INTERNAL = '/api';
+
+        function handleCloudChange() {
+            const cloudId = document.getElementById('cloudId').value;
+            const serverContainer = document.getElementById('serverContainer');
+            const inputData = document.getElementById('inputData');
+            const hint = document.getElementById('inputTypeHint');
+
+            if (cloudId === 'UG') {
+                serverContainer.classList.remove('hidden');
+                inputData.placeholder = "Dán Local Storage...";
+                hint.textContent = "(Local Storage)";
+            } else {
+                serverContainer.classList.add('hidden');
+                inputData.placeholder = "Tài khoản|Mật khẩu";
+                hint.textContent = "(Tài khoản|Mật khẩu)";
+            }
+        }
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const entry = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            let colorClass = 'text-gray-300';
+            if (type === 'success') colorClass = 'text-green-400';
+            if (type === 'error') colorClass = 'text-red-400';
+            entry.className = `${colorClass} break-words`;
+            entry.innerHTML = `<span class="text-gray-600">[${timestamp}]</span> ${message}`;
+            logsDiv.prepend(entry);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '<div class="text-gray-600">> Logs cleared.</div>';
+        }
+
+        function showToast(title, message, type = 'info') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastMessage').textContent = message;
+            
+            toast.className = `fixed bottom-5 right-5 bg-gray-800 text-white px-6 py-4 rounded-lg shadow-2xl border-l-4 transform transition-all duration-300 z-50 max-w-sm translate-y-0 opacity-100`;
+            if (type === 'success') toast.classList.add('border-green-500');
+            else if (type === 'error') toast.classList.add('border-red-500');
+            else toast.classList.add('border-blue-500');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        async function checkStatus() {
+            const btn = document.getElementById('btnCheck');
+            const resultDiv = document.getElementById('statusResult');
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
+            btn.disabled = true;
+            resultDiv.innerHTML = '<div class="text-center text-gray-500">Đang tải...</div>';
+
+            try {
+                // Gọi API nội bộ /api/status
+                const response = await fetch(`${API_INTERNAL}/status`);
+                const json = await response.json();
+                
+                if (json.success && json.data) {
+                    renderStatus(json.data);
+                    showToast('Thành công', 'Đã cập nhật trạng thái', 'success');
+                } else {
+                    throw new Error(json.message || 'Lỗi lấy dữ liệu');
+                }
+            } catch (error) {
+                log(`Lỗi: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="text-red-400 text-center">Lỗi hệ thống.</div>`;
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Làm mới';
+                btn.disabled = false;
+            }
+        }
+
+        function renderStatus(data) {
+            const container = document.getElementById('statusResult');
+            container.innerHTML = '';
+            const flags = { "America": "🇺🇸 US", "Germany": "🇩🇪 DE", "Singapore": "🇸🇬 SG", "Hong Kong": "🇭🇰 HK", "Japan": "🇯🇵 JP" };
+
+            Object.entries(data).forEach(([region, isAvailable]) => {
+                const statusColor = isAvailable ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-red-500/20 border-red-500 text-red-400';
+                const statusText = isAvailable ? 'Còn máy' : 'Hết máy';
+                const icon = isAvailable ? 'fa-check-circle' : 'fa-times-circle';
+
+                const card = document.createElement('div');
+                card.className = `flex justify-between items-center p-3 rounded border ${statusColor}`;
+                card.innerHTML = `
+                    <div class="font-medium text-white flex items-center gap-2"><span>${flags[region] || region}</span></div>
+                    <div class="flex items-center text-sm font-bold"><i class="fa-solid ${icon} mr-1"></i> ${statusText}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function buyDevice() {
+            const cloudId = document.getElementById('cloudId').value;
+            const inputData = document.getElementById('inputData').value.trim();
+            const server = document.getElementById('serverRegion').value;
+
+            if (!inputData) {
+                showToast('Thiếu dữ liệu', 'Vui lòng nhập dữ liệu đầu vào', 'warn');
+                return;
+            }
+
+            const btn = document.getElementById('btnBuy');
+            const originalBtnText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+            btn.disabled = true;
+
+            try {
+                // Gọi API nội bộ /api/buy (Không cần gửi Token)
+                const response = await fetch(`${API_INTERNAL}/buy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cloud_id: cloudId, server: server, input_data: inputData })
+                });
+
+                const json = await response.json();
+
+                if (json.success) {
+                    log(`Thành công: ${json.message}`, 'success');
+                    showToast('Thành công!', json.message, 'success');
+                } else {
+                    log(`Thất bại: ${json.message}`, 'error');
+                    showToast('Lỗi', json.message, 'error');
+                }
+            } catch (error) {
+                log(`Lỗi mạng: ${error.message}`, 'error');
+                showToast('Lỗi', 'Không thể kết nối server', 'error');
+            } finally {
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+            }
+        }
+
+        handleCloudChange();
+    </script>
+</body>
+</html>
+
