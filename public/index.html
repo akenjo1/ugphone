@@ -25,13 +25,15 @@
             <!-- Status Panel -->
             <div class="bg-slate-800 rounded-lg p-6 shadow-xl border border-slate-700 flex flex-col">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-semibold text-white">Khu vực khả dụng</h2>
+                    <h2 class="text-lg font-semibold text-white">Trạng thái UGPhone</h2>
                     <button onclick="checkStatus()" id="btnCheck" class="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs rounded transition">
                         <i class="fa-solid fa-sync"></i> Refresh
                     </button>
                 </div>
+                <!-- Danh sách server sẽ luôn hiển thị ở đây -->
                 <div id="statusResult" class="grid grid-cols-1 gap-3 flex-grow content-start">
-                    <p class="text-slate-500 text-center text-sm py-4">Đang chờ dữ liệu...</p>
+                    <!-- Mặc định hiển thị loading skeleton -->
+                    <p class="text-slate-500 text-center text-sm py-4">Đang tải dữ liệu...</p>
                 </div>
             </div>
 
@@ -90,6 +92,17 @@
     <script>
         const API_INTERNAL = '/api';
 
+        // Danh sách Server cố định (Để đảm bảo giao diện luôn hiện đủ)
+        // Key phải khớp với API trả về (America, Singapore...)
+        // Value là tên hiển thị đẹp + Cờ
+        const SERVER_LIST_DEF = [
+            { key: "Singapore", name: "Singapore", flag: "🇸🇬" },
+            { key: "Hong Kong", name: "Hong Kong", flag: "🇭🇰" },
+            { key: "Japan",     name: "Japan",     flag: "🇯🇵" },
+            { key: "Germany",   name: "Germany",   flag: "🇩🇪" },
+            { key: "America",   name: "USA",       flag: "🇺🇸" }
+        ];
+
         function handleCloudChange() {
             const cloudId = document.getElementById('cloudId').value;
             const sv = document.getElementById('serverContainer');
@@ -121,31 +134,78 @@
             const resDiv = document.getElementById('statusResult');
             btn.disabled = true;
             btn.innerHTML = '...';
-            resDiv.innerHTML = '<div class="text-center text-slate-500 text-sm">Checking servers...</div>';
-
+            
             try {
                 const req = await fetch(`${API_INTERNAL}/status`);
                 const json = await req.json();
                 
-                if (json.status === 'ok' && json.server_list) {
-                    resDiv.innerHTML = '';
-                    Object.entries(json.server_list).forEach(([region, active]) => {
-                        const color = active ? 'border-green-500 text-green-400 bg-green-500/10' : 'border-red-900 text-red-900 bg-red-900/10 opacity-50';
-                        const item = document.createElement('div');
-                        item.className = `flex justify-between p-2 rounded border ${color} text-sm font-medium`;
-                        item.innerHTML = `<span>${region}</span> <span>${active ? 'Online' : 'Offline'}</span>`;
-                        resDiv.appendChild(item);
-                    });
-                    log("Cập nhật trạng thái thành công.");
+                // Nếu lấy được data (dù rỗng hay có)
+                if (json.server_data) {
+                    renderStatus(json.server_data);
+                    
+                    if(json.status === 'failed') {
+                        log("Không lấy được dữ liệu chính xác từ máy chủ gốc.", true);
+                    } else {
+                        log("Cập nhật trạng thái thành công.");
+                    }
                 } else {
-                    resDiv.innerHTML = '<div class="text-center text-red-400">Không thể lấy dữ liệu</div>';
+                    // Lỗi cấu trúc
+                    renderStatus({}); 
+                    log("Lỗi: Dữ liệu trả về không đúng định dạng.", true);
                 }
+
             } catch (e) {
+                renderStatus({}); // Render mặc định hết server
                 log("Lỗi kết nối server.", true);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-sync"></i> Refresh';
             }
+        }
+
+        function renderStatus(apiData) {
+            const container = document.getElementById('statusResult');
+            container.innerHTML = '';
+
+            SERVER_LIST_DEF.forEach(server => {
+                // Kiểm tra xem server này có trong data API trả về không
+                // Lưu ý: apiData[server.key] có thể là true/false. Nếu undefined nghĩa là API lỗi.
+                const isOnline = apiData[server.key] === true;
+                const isUnknown = apiData[server.key] === undefined;
+
+                let color = '';
+                let statusText = '';
+                let icon = '';
+
+                if (isUnknown) {
+                    // API không trả về region này -> Màu xám (Unknown)
+                    color = 'border-slate-600 text-slate-500 bg-slate-700/20';
+                    statusText = 'Không rõ';
+                    icon = 'fa-question-circle';
+                } else if (isOnline) {
+                    // Có hàng -> Màu xanh
+                    color = 'border-green-500 text-green-400 bg-green-500/10';
+                    statusText = 'Còn máy';
+                    icon = 'fa-check-circle';
+                } else {
+                    // Hết hàng -> Màu đỏ
+                    color = 'border-red-500 text-red-400 bg-red-900/10';
+                    statusText = 'Hết máy';
+                    icon = 'fa-times-circle';
+                }
+
+                const item = document.createElement('div');
+                item.className = `flex justify-between p-3 rounded border ${color} text-sm font-medium items-center`;
+                item.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg">${server.flag}</span>
+                        <span>${server.name}</span>
+                    </div> 
+                    <div class="flex items-center gap-1">
+                        <i class="fa-solid ${icon}"></i> <span>${statusText}</span>
+                    </div>`;
+                container.appendChild(item);
+            });
         }
 
         async function buyDevice() {
@@ -186,7 +246,6 @@
         }
 
         handleCloudChange();
-        // Auto check on load
         checkStatus();
     </script>
 </body>
