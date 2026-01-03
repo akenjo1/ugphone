@@ -30,7 +30,8 @@
             <div id="userPanel" class="hidden flex items-center gap-3">
                 <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2">
                     <i class="fa-solid fa-coins text-yellow-400"></i>
-                    <span id="userBalance" class="font-bold text-yellow-400 text-sm">0</span>
+                    <!-- ID userBalance để hiển thị số dư -->
+                    <span id="userBalance" class="font-bold text-yellow-400 text-sm">Loading...</span>
                 </div>
                 <img id="userAvatar" src="" class="w-8 h-8 rounded-full border-2 border-slate-600">
                 <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-1">
@@ -42,13 +43,12 @@
 
     <!-- Error Box -->
     <div id="errorBox" class="hidden max-w-4xl mx-auto m-4 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg shadow-lg">
-        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> LỖI ĐĂNG NHẬP</h3>
+        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> LỖI</h3>
         <p id="errorMsg" class="font-mono text-xs break-all"></p>
         <button onclick="this.parentElement.classList.add('hidden')" class="mt-2 text-xs underline">Đóng</button>
     </div>
 
     <div class="max-w-4xl mx-auto p-4 space-y-8 pb-20">
-
         <!-- Banner -->
         <div id="welcomeBanner" class="bg-gradient-to-r from-sky-600 to-indigo-700 rounded-2xl p-8 text-center shadow-xl hidden">
             <h1 class="text-2xl font-bold mb-2">Miễn Phí Cloud VPS & Device</h1>
@@ -57,7 +57,7 @@
                 <i class="fa-brands fa-google"></i> Bắt đầu ngay
             </button>
             <div class="mt-6 p-2 bg-black/30 rounded border border-white/10 text-[10px] text-slate-400 inline-block">
-                Domain hiện tại: <span id="currentDomain" class="text-yellow-400 font-mono font-bold">Checking...</span>
+                Domain: <span id="currentDomain" class="text-yellow-400 font-mono font-bold">...</span>
             </div>
         </div>
 
@@ -87,7 +87,6 @@
         <div id="shopSection" class="hidden bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
             <div class="bg-slate-700/50 p-4 border-b border-slate-700 flex justify-between items-center">
                 <h2 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-server text-sky-500"></i> Cửa Hàng</h2>
-                <!-- UPDATE GIÁ HIỂN THỊ -->
                 <span class="text-xs font-bold bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">Giá: 50 Xu</span>
             </div>
             <div class="p-6 space-y-5">
@@ -115,8 +114,6 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
-                
-                <!-- UPDATE NÚT MUA -->
                 <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
                     <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
                 </button>
@@ -143,12 +140,7 @@
           appId: "1:233888764150:web:dbc486f46d850fb97d5cd7"
         };
 
-        try {
-            firebase.initializeApp(firebaseConfig);
-        } catch (error) {
-            showError("Firebase init error: " + error.message);
-        }
-        
+        try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error(e); }
         const auth = firebase.auth();
         const db = firebase.firestore();
 
@@ -165,11 +157,29 @@
                     toggleUI(true);
                     document.getElementById('userAvatar').src = user.photoURL;
                     
+                    // --- LOGIC LẮNG NGHE SỐ DƯ (Đã sửa) ---
                     if(unsubscribeBalance) unsubscribeBalance();
-                    unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot(doc => {
-                        const data = doc.data();
-                        animateValue("userBalance", parseInt(document.getElementById('userBalance').innerText), (data ? (data.balance || 0) : 0), 1000);
+                    
+                    unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot((doc) => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            const balance = data.balance !== undefined ? data.balance : 0;
+                            
+                            // Log ra console để kiểm tra
+                            console.log("Số dư mới nhận được:", balance);
+                            
+                            // Cập nhật lên màn hình ngay lập tức (Không dùng animation)
+                            document.getElementById('userBalance').innerText = balance;
+                        } else {
+                            // Nếu user chưa có trong database, set là 0
+                            document.getElementById('userBalance').innerText = "0";
+                            console.log("User chưa có dữ liệu trong DB");
+                        }
+                    }, (error) => {
+                        console.error("Lỗi lắng nghe số dư:", error);
+                        // Nếu lỗi permission thì thường do Firebase Rules
                     });
+
                 } else {
                     currentUser = null;
                     toggleUI(false);
@@ -178,48 +188,35 @@
             });
         });
 
+        // ... Các hàm Login, Logout, UI giữ nguyên ...
         function loginGoogle() {
             const btn = document.getElementById('btnLogin');
-            if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chuyển hướng...';
+            if(btn) btn.innerHTML = '...';
             const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithRedirect(provider).catch(error => {
-                handleLoginError(error);
-                if(btn) btn.innerHTML = '<i class="fa-brands fa-google text-red-500"></i> Đăng nhập';
-            });
+            auth.signInWithRedirect(provider).catch(handleLoginError);
         }
-
         function handleLoginError(error) {
-            console.error("Login Error:", error);
             let userMsg = error.message;
-            if (error.code === 'auth/unauthorized-domain') {
-                userMsg = `Domain "${window.location.hostname}" chưa được phép. Vào Firebase Console thêm domain này.`;
-            }
+            if (error.code === 'auth/unauthorized-domain') userMsg = `Domain "${window.location.hostname}" chưa được phép.`;
             showError(userMsg);
         }
-
         function logout() { auth.signOut(); }
-
         function toggleUI(isLoggedIn) {
             const ids = ['authBtn', 'welcomeBanner'];
             const userIds = ['userPanel', 'earnSection', 'shopSection'];
             ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', isLoggedIn); });
             userIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', !isLoggedIn); });
         }
-
         function showError(msg) {
             const box = document.getElementById('errorBox');
-            const txt = document.getElementById('errorMsg');
+            document.getElementById('errorMsg').innerText = msg;
             box.classList.remove('hidden');
-            txt.innerText = msg;
         }
 
         async function generateLink() {
             if(!currentUser) return;
             const btn = document.getElementById('btnGenLink');
-            const originalHTML = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '...';
-
+            btn.disabled = true; btn.innerHTML = '...';
             try {
                 const res = await fetch('/api/gen-link', {
                     method: 'POST',
@@ -227,14 +224,10 @@
                     body: JSON.stringify({ uid: currentUser.uid, host_url: window.location.origin })
                 });
                 const data = await res.json();
-                if(data.success) {
-                    window.open(data.shortenedUrl, '_blank');
-                    showToast('OK', 'Đã mở link!', 'success');
-                } else {
-                    showToast('Lỗi', data.error, 'error');
-                }
-            } catch(e) { showToast('Lỗi', 'Lỗi kết nối', 'error'); }
-            finally { btn.disabled = false; btn.innerHTML = originalHTML; }
+                if(data.success) { window.open(data.shortenedUrl, '_blank'); showToast('OK', 'Đã mở link!', 'success'); }
+                else showToast('Lỗi', data.error, 'error');
+            } catch(e) { showToast('Lỗi', 'Lỗi mạng', 'error'); }
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt'; }
         }
 
         async function submitCode() {
@@ -242,8 +235,7 @@
             const code = document.getElementById('promoCode').value.trim();
             if(!code) return showToast('Lỗi', 'Chưa nhập mã', 'warning');
             const btn = document.getElementById('btnSubmitCode');
-            btn.disabled = true;
-            btn.innerHTML = '...';
+            btn.disabled = true; btn.innerHTML = '...';
             try {
                 const res = await fetch('/api/claim', {
                     method: 'POST',
@@ -251,11 +243,12 @@
                     body: JSON.stringify({ uid: currentUser.uid, code: code })
                 });
                 const data = await res.json();
-                if(data.success) {
-                    showToast('Thành công', data.message, 'success');
+                if(data.success) { 
+                    showToast('Thành công', data.message, 'success'); 
                     document.getElementById('promoCode').value = '';
-                } else {
-                    showToast('Lỗi', data.error, 'error');
+                    // Web sẽ tự cập nhật số dư nhờ onSnapshot
+                } else { 
+                    showToast('Lỗi', data.error, 'error'); 
                 }
             } catch(e) { showToast('Lỗi', 'Lỗi hệ thống', 'error'); }
             finally { btn.disabled = false; btn.innerHTML = 'Nhận'; }
@@ -264,18 +257,16 @@
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
-            if(!inputData) return showToast('Thiếu tin', 'Nhập dữ liệu đầu vào', 'warning');
+            if(!inputData) return showToast('Thiếu tin', 'Nhập dữ liệu', 'warning');
             
-            // UPDATE LOGIC KIỂM TRA SỐ DƯ
-            if(parseInt(document.getElementById('userBalance').innerText) < 50) 
-                return showToast('Thiếu Xu', 'Cần 50 Xu', 'error');
+            // Lấy giá trị thực tế
+            const currentBal = parseInt(document.getElementById('userBalance').innerText) || 0;
+            if(currentBal < 50) return showToast('Thiếu Xu', 'Cần 50 Xu', 'error');
             
             if(!confirm("Mua máy với giá 50 Xu?")) return;
             
             const btn = document.getElementById('btnBuy');
-            const originalHTML = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = 'Đang xử lý...';
+            btn.disabled = true; btn.innerHTML = 'Đang xử lý...';
             try {
                 const res = await fetch('/api/buy', {
                     method: 'POST',
@@ -291,47 +282,21 @@
                 if(data.success) showToast('Thành công', data.message, 'success');
                 else showToast('Thất bại', data.message, 'error');
             } catch(e) { showToast('Lỗi', 'Lỗi kết nối', 'error'); }
-            finally { btn.disabled = false; btn.innerHTML = originalHTML; }
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)'; }
         }
 
         function toggleServer() {
             const val = document.getElementById('cloudId').value;
             const svDiv = document.getElementById('serverDiv');
-            if (val === 'UG') svDiv.classList.remove('hidden');
-            else svDiv.classList.add('hidden');
+            val === 'UG' ? svDiv.classList.remove('hidden') : svDiv.classList.add('hidden');
         }
 
         function showToast(title, msg, type) {
             const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
             document.getElementById('toastTitle').innerText = title;
             document.getElementById('toastMsg').innerText = msg;
-            toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-4 rounded-xl shadow-2xl border-l-4 translate-y-0 opacity-100 transition-all duration-300 z-50 max-w-sm flex items-start gap-3`;
-            if(type === 'success') {
-                toast.classList.add('border-green-500');
-                icon.innerHTML = '<i class="fa-solid fa-check-circle text-green-500"></i>';
-            } else if(type === 'error') {
-                toast.classList.add('border-red-500');
-                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500"></i>';
-            } else {
-                toast.classList.add('border-yellow-500');
-                icon.innerHTML = '<i class="fa-solid fa-circle-info text-yellow-500"></i>';
-            }
+            toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-4 rounded-xl shadow-2xl border-l-4 translate-y-0 opacity-100 transition-all duration-300 z-50 max-w-sm flex items-start gap-3 ${type === 'success' ? 'border-green-500' : type === 'error' ? 'border-red-500' : 'border-yellow-500'}`;
             setTimeout(() => { toast.classList.add('translate-y-24', 'opacity-0'); }, 4000);
-        }
-        
-        function animateValue(id, start, end, duration) {
-            if (start === end) return;
-            const range = end - start;
-            let current = start;
-            const increment = end > start ? 1 : -1;
-            const stepTime = Math.abs(Math.floor(duration / range));
-            const obj = document.getElementById(id);
-            const timer = setInterval(function() {
-                current += increment;
-                obj.innerHTML = current;
-                if (current == end) clearInterval(timer);
-            }, stepTime > 0 ? stepTime : 10);
         }
     </script>
 </body>
