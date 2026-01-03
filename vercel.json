@@ -3,6 +3,7 @@
     { "source": "/api/buy", "destination": "/api/buy.js" },
     { "source": "/api/gen-link", "destination": "/api/gen_link.js" },
     { "source": "/api/claim", "destination": "/api/claim.js" },
+    { "source": "/api/create-code", "destination": "/api/create_code.js" },
     { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
