@@ -5,7 +5,11 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({error: 'Method Not Allowed'});
 
     const { uid, cloud_id, server, input_data } = req.body;
-    const MACHINE_PRICE = 500; // Giá máy
+    
+    // --- CẬP NHẬT GIÁ TẠI ĐÂY ---
+    const MACHINE_PRICE = 50; 
+    // ----------------------------
+    
     const HOANG_TOKEN = process.env.HOANG_CLOUD_TOKEN;
 
     if (!uid) return res.status(401).json({ error: "Chưa đăng nhập" });
@@ -24,7 +28,6 @@ export default async function handler(req, res) {
         });
 
         // BƯỚC 2: Gọi API Mua máy (Ẩn Token server-side)
-        // Người dùng không biết bạn gọi đi đâu
         const payload = { user_token: HOANG_TOKEN, cloud_id, server, input_data };
         
         let apiSuccess = false;
@@ -58,7 +61,7 @@ export default async function handler(req, res) {
             });
             return res.status(400).json({ 
                 success: false, 
-                message: "Lỗi khởi tạo: " + apiMessage + ". Đã hoàn lại 500 Xu vào tài khoản." 
+                message: "Lỗi khởi tạo: " + apiMessage + ". Đã hoàn lại Xu." 
             });
         }
 
