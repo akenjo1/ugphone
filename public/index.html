@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDK Compat (Phiên bản ổn định nhất) -->
+    <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -40,9 +40,9 @@
         </div>
     </nav>
 
-    <!-- Error Box (Dành cho việc bắt lỗi) -->
+    <!-- Error Box -->
     <div id="errorBox" class="hidden max-w-4xl mx-auto m-4 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg shadow-lg">
-        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> LỖI ĐĂNG NHẬP (Chụp ảnh gửi Admin)</h3>
+        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> LỖI ĐĂNG NHẬP</h3>
         <p id="errorMsg" class="font-mono text-xs break-all"></p>
         <button onclick="this.parentElement.classList.add('hidden')" class="mt-2 text-xs underline">Đóng</button>
     </div>
@@ -56,7 +56,6 @@
             <button onclick="loginGoogle()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
                 <i class="fa-brands fa-google"></i> Bắt đầu ngay
             </button>
-            
             <div class="mt-6 p-2 bg-black/30 rounded border border-white/10 text-[10px] text-slate-400 inline-block">
                 Domain hiện tại: <span id="currentDomain" class="text-yellow-400 font-mono font-bold">Checking...</span>
             </div>
@@ -88,7 +87,8 @@
         <div id="shopSection" class="hidden bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
             <div class="bg-slate-700/50 p-4 border-b border-slate-700 flex justify-between items-center">
                 <h2 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-server text-sky-500"></i> Cửa Hàng</h2>
-                <span class="text-xs font-bold bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">Giá: 500 Xu</span>
+                <!-- UPDATE GIÁ HIỂN THỊ -->
+                <span class="text-xs font-bold bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">Giá: 50 Xu</span>
             </div>
             <div class="p-6 space-y-5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -115,8 +115,10 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
+                
+                <!-- UPDATE NÚT MUA -->
                 <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-cart-plus"></i> Mua Ngay (500 Xu)
+                    <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
                 </button>
             </div>
         </div>
@@ -132,7 +134,6 @@
     </div>
 
     <script>
-        // CẤU HÌNH FIREBASE
         const firebaseConfig = {
           apiKey: "AIzaSyAMN-_pwnxFtAjX3DPnZKIijscpdicEwlw",
           authDomain: "ugphone-8879f.firebaseapp.com",
@@ -142,11 +143,10 @@
           appId: "1:233888764150:web:dbc486f46d850fb97d5cd7"
         };
 
-        // INIT FIREBASE
         try {
             firebase.initializeApp(firebaseConfig);
         } catch (error) {
-            showError("Lỗi khởi tạo Firebase: " + error.message);
+            showError("Firebase init error: " + error.message);
         }
         
         const auth = firebase.auth();
@@ -155,20 +155,9 @@
         let currentUser = null;
         let unsubscribeBalance = null;
 
-        // --- AUTH SYSTEM ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('currentDomain').innerText = window.location.hostname;
-
-            // Xử lý kết quả trả về sau khi Redirect
-            auth.getRedirectResult()
-                .then((result) => {
-                    if (result && result.user) {
-                        showToast('Thành Công', 'Đăng nhập thành công!', 'success');
-                    }
-                })
-                .catch((error) => {
-                    handleLoginError(error);
-                });
+            auth.getRedirectResult().catch(handleLoginError);
 
             auth.onAuthStateChanged(user => {
                 if (user) {
@@ -189,14 +178,10 @@
             });
         });
 
-        // --- HÀM LOGIN (Dùng Redirect - Không dùng Popup) ---
         function loginGoogle() {
             const btn = document.getElementById('btnLogin');
             if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chuyển hướng...';
-            
             const provider = new firebase.auth.GoogleAuthProvider();
-            
-            // QUAN TRỌNG: Dùng Redirect để tránh popup blocker
             auth.signInWithRedirect(provider).catch(error => {
                 handleLoginError(error);
                 if(btn) btn.innerHTML = '<i class="fa-brands fa-google text-red-500"></i> Đăng nhập';
@@ -205,32 +190,20 @@
 
         function handleLoginError(error) {
             console.error("Login Error:", error);
-            
             let userMsg = error.message;
             if (error.code === 'auth/unauthorized-domain') {
-                userMsg = `Tên miền "${window.location.hostname}" chưa được phép. Vào Firebase Console -> Auth -> Settings -> Authorized Domains để thêm.`;
-            } else if (error.code === 'auth/operation-not-allowed') {
-                userMsg = `Chưa bật Google Auth. Vào Firebase Console -> Auth -> Sign-in method -> Bật Google.`;
+                userMsg = `Domain "${window.location.hostname}" chưa được phép. Vào Firebase Console thêm domain này.`;
             }
-
             showError(userMsg);
         }
 
-        function logout() {
-            auth.signOut();
-        }
+        function logout() { auth.signOut(); }
 
         function toggleUI(isLoggedIn) {
             const ids = ['authBtn', 'welcomeBanner'];
             const userIds = ['userPanel', 'earnSection', 'shopSection'];
-            ids.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.classList.toggle('hidden', isLoggedIn);
-            });
-            userIds.forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.classList.toggle('hidden', !isLoggedIn);
-            });
+            ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', isLoggedIn); });
+            userIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', !isLoggedIn); });
         }
 
         function showError(msg) {
@@ -240,7 +213,6 @@
             txt.innerText = msg;
         }
 
-        // --- BACKEND LOGIC ---
         async function generateLink() {
             if(!currentUser) return;
             const btn = document.getElementById('btnGenLink');
@@ -293,9 +265,13 @@
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
             if(!inputData) return showToast('Thiếu tin', 'Nhập dữ liệu đầu vào', 'warning');
-            if(parseInt(document.getElementById('userBalance').innerText) < 500) 
-                return showToast('Thiếu Xu', 'Cần 500 Xu', 'error');
-            if(!confirm("Mua máy với giá 500 Xu?")) return;
+            
+            // UPDATE LOGIC KIỂM TRA SỐ DƯ
+            if(parseInt(document.getElementById('userBalance').innerText) < 50) 
+                return showToast('Thiếu Xu', 'Cần 50 Xu', 'error');
+            
+            if(!confirm("Mua máy với giá 50 Xu?")) return;
+            
             const btn = document.getElementById('btnBuy');
             const originalHTML = btn.innerHTML;
             btn.disabled = true;
