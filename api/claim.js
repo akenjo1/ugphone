@@ -8,43 +8,38 @@ export default async function handler(req, res) {
 
     const codeInput = code.trim().toUpperCase();
     
-    // Khai báo các Ref cần dùng
     const userRef = db.collection('users').doc(uid);
     const linkCodeRef = db.collection('pending_codes').doc(codeInput);
     const promoRef = db.collection('promo_codes').doc(codeInput);
 
     try {
         const resultMessage = await db.runTransaction(async (t) => {
-            // ============================================================
-            // BƯỚC 1: ĐỌC TOÀN BỘ DỮ LIỆU CẦN THIẾT (READS)
-            // Firebase bắt buộc phải đọc hết trước khi thực hiện bất kỳ lệnh ghi nào
-            // ============================================================
+            // 1. Đọc dữ liệu
             const linkSnap = await t.get(linkCodeRef);
             const promoSnap = await t.get(promoRef);
-            const userSnap = await t.get(userRef);
+            
+            // Lưu ý: Không cần đọc User balance nữa, ta sẽ dùng lệnh increment để cộng thẳng
 
-            const userData = userSnap.data() || {};
-            const currentBal = userData.balance || 0;
+            // 2. Xử lý Logic
 
-            // ============================================================
-            // BƯỚC 2: KIỂM TRA LOGIC & THỰC HIỆN GHI (WRITES)
-            // ============================================================
-
-            // TRƯỜNG HỢP 1: Mã từ Link Rút Gọn
+            // --- TRƯỜNG HỢP 1: Mã Vượt Link ---
             if (linkSnap.exists) {
                 const data = linkSnap.data();
-
                 if (data.uid !== uid) throw new Error("Mã này không phải của bạn.");
                 if (!data.valid) throw new Error("Mã này đã được sử dụng.");
                 
-                // Ghi dữ liệu
+                // Hủy mã
                 t.update(linkCodeRef, { valid: false, usedAt: new Date().toISOString() });
-                t.set(userRef, { balance: currentBal + 100 }, { merge: true });
+                
+                // Cộng 100 Xu (Sử dụng FieldValue.increment để an toàn tuyệt đối)
+                t.set(userRef, { 
+                    balance: admin.firestore.FieldValue.increment(100) 
+                }, { merge: true });
 
                 return "Thành công! +100 Xu (Mã vượt link).";
             }
 
-            // TRƯỜNG HỢP 2: Mã Giftcode (Admin tạo)
+            // --- TRƯỜNG HỢP 2: Mã Giftcode ---
             if (promoSnap.exists) {
                 const pData = promoSnap.data();
                 
@@ -54,18 +49,21 @@ export default async function handler(req, res) {
                 const redeemedBy = pData.redeemed_by || [];
                 if (redeemedBy.includes(uid)) throw new Error("Bạn đã nhập mã này rồi!");
 
-                // Ghi dữ liệu
+                // Cập nhật lượt dùng mã
                 t.update(promoRef, {
                     used_count: admin.firestore.FieldValue.increment(1),
                     redeemed_by: admin.firestore.FieldValue.arrayUnion(uid)
                 });
                 
-                t.set(userRef, { balance: currentBal + pData.reward }, { merge: true });
+                // Cộng Xu thưởng (Ép kiểu Number cho chắc chắn)
+                const rewardAmount = Number(pData.reward);
+                t.set(userRef, { 
+                    balance: admin.firestore.FieldValue.increment(rewardAmount) 
+                }, { merge: true });
 
-                return `Thành công! +${pData.reward} Xu (Giftcode).`;
+                return `Thành công! +${rewardAmount} Xu (Giftcode).`;
             }
 
-            // Nếu không thuộc cả 2 loại trên
             throw new Error("Mã không tồn tại hoặc không hợp lệ.");
         });
 
