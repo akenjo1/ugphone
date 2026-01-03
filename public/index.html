@@ -3,74 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Cloud</title>
+    <title>Cloud Manager Auto</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
         body { font-family: 'Roboto', sans-serif; }
-        /* Hiệu ứng loading nhẹ */
-        .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        
+        /* Toggle Switch CSS */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #10B981;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #10B981;
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-3 md:p-6">
 
-    <div class="max-w-5xl mx-auto space-y-6">
+    <div class="max-w-6xl mx-auto space-y-6">
         
         <!-- Header -->
-        <div class="text-center space-y-2 mb-8">
-            <h1 class="text-3xl font-bold text-sky-500 uppercase tracking-wider">Cloud Manager</h1>
-            <p class="text-slate-400 text-xs">Hệ thống cấp phát tài nguyên tự động</p>
+        <div class="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg">
+            <div class="mb-4 md:mb-0 text-center md:text-left">
+                <h1 class="text-2xl font-bold text-sky-500 uppercase tracking-wider"><i class="fa-solid fa-cloud"></i> Cloud Manager</h1>
+                <p class="text-slate-400 text-xs">Phiên bản tự động cập nhật</p>
+            </div>
+            
+            <!-- Auto Refresh Control -->
+            <div class="flex items-center gap-3 bg-slate-900 p-2 rounded border border-slate-600">
+                <span class="text-xs font-bold text-slate-300 uppercase">Tự động check (5s)</span>
+                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="toggle" id="autoToggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-0 top-0" onchange="toggleAutoRefresh()"/>
+                    <label for="autoToggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-600 cursor-pointer"></label>
+                </div>
+                <div id="countdown" class="text-xs font-mono text-sky-400 w-8 text-right">--</div>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <!-- Cột trái: Trạng thái Server (Chiếm 5 phần) -->
-            <div class="lg:col-span-5 bg-slate-800 rounded-lg p-5 shadow-xl border border-slate-700 flex flex-col h-full">
+            <!-- Cột Trái: Trạng thái Server (Luôn hiển thị) -->
+            <div class="lg:col-span-5 bg-slate-800 rounded-lg p-5 shadow-xl border border-slate-700 flex flex-col">
                 <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-700">
-                    <h2 class="text-sm font-bold text-white uppercase"><i class="fa-solid fa-server mr-2"></i> Trạng thái Server</h2>
-                    <button onclick="checkStatus()" id="btnCheck" class="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white text-[10px] uppercase font-bold rounded transition">
-                        <i class="fa-solid fa-sync"></i> Refresh
-                    </button>
+                    <h2 class="text-sm font-bold text-white uppercase"><i class="fa-solid fa-server mr-2"></i> Live Status</h2>
+                    <span id="lastUpdate" class="text-[10px] text-slate-500 italic">Chưa cập nhật</span>
                 </div>
                 
-                <!-- Danh sách server sẽ luôn hiển thị ở đây -->
-                <div id="statusResult" class="grid grid-cols-1 gap-2 flex-grow content-start overflow-y-auto max-h-[400px]">
-                    <!-- Mặc định sẽ được render bằng JS ngay khi load -->
+                <!-- Khu vực hiển thị danh sách -->
+                <div id="statusResult" class="grid grid-cols-1 gap-2 flex-grow content-start min-h-[200px]">
+                    <!-- JS sẽ điền vào đây -->
                 </div>
             </div>
 
-            <!-- Cột phải: Form Mua (Chiếm 7 phần) -->
+            <!-- Cột Phải: Form Mua -->
             <div class="lg:col-span-7 bg-slate-800 rounded-lg p-6 shadow-xl border border-slate-700">
                 <div class="mb-4 pb-2 border-b border-slate-700">
-                    <h2 class="text-sm font-bold text-white uppercase"><i class="fa-solid fa-cart-shopping mr-2"></i> Khởi tạo thiết bị</h2>
+                    <h2 class="text-sm font-bold text-white uppercase"><i class="fa-solid fa-cart-plus mr-2"></i> Mua Máy</h2>
                 </div>
                 
                 <div class="space-y-5">
                     <!-- Loại Cloud -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Gói dịch vụ</label>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Chọn loại máy</label>
                         <div class="grid grid-cols-3 gap-2">
                             <label class="cursor-pointer">
                                 <input type="radio" name="cloudType" value="UG" class="peer sr-only" checked onchange="handleCloudChange()">
-                                <div class="rounded-md p-3 text-center border border-slate-600 bg-slate-700 peer-checked:bg-sky-600 peer-checked:border-sky-500 peer-checked:text-white transition-all hover:bg-slate-600">
-                                    <div class="font-bold text-sm">UGPhone</div>
-                                    <div class="text-[10px] opacity-75">Cloud S1</div>
+                                <div class="rounded p-2 text-center border border-slate-600 bg-slate-700 peer-checked:bg-sky-600 peer-checked:text-white hover:bg-slate-600 transition">
+                                    <div class="font-bold text-xs">UGPhone</div>
                                 </div>
                             </label>
                             <label class="cursor-pointer">
                                 <input type="radio" name="cloudType" value="VS" class="peer sr-only" onchange="handleCloudChange()">
-                                <div class="rounded-md p-3 text-center border border-slate-600 bg-slate-700 peer-checked:bg-purple-600 peer-checked:border-purple-500 peer-checked:text-white transition-all hover:bg-slate-600">
-                                    <div class="font-bold text-sm">VSPhone</div>
-                                    <div class="text-[10px] opacity-75">Cloud S2</div>
+                                <div class="rounded p-2 text-center border border-slate-600 bg-slate-700 peer-checked:bg-purple-600 peer-checked:text-white hover:bg-slate-600 transition">
+                                    <div class="font-bold text-xs">VsPhone</div>
                                 </div>
                             </label>
                             <label class="cursor-pointer">
                                 <input type="radio" name="cloudType" value="VM" class="peer sr-only" onchange="handleCloudChange()">
-                                <div class="rounded-md p-3 text-center border border-slate-600 bg-slate-700 peer-checked:bg-pink-600 peer-checked:border-pink-500 peer-checked:text-white transition-all hover:bg-slate-600">
-                                    <div class="font-bold text-sm">VMOS</div>
-                                    <div class="text-[10px] opacity-75">Virtual</div>
+                                <div class="rounded p-2 text-center border border-slate-600 bg-slate-700 peer-checked:bg-pink-600 peer-checked:text-white hover:bg-slate-600 transition">
+                                    <div class="font-bold text-xs">VMOS</div>
                                 </div>
                             </label>
                         </div>
@@ -78,9 +91,8 @@
 
                     <!-- Chọn Server -->
                     <div id="serverContainer">
-                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Khu vực (Region)</label>
-                        <select id="serverRegion" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-3 text-sm focus:border-sky-500 outline-none transition-colors">
-                            <!-- Option sẽ được cập nhật tự động kèm trạng thái -->
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Khu vực</label>
+                        <select id="serverRegion" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-3 text-sm focus:border-sky-500 outline-none">
                             <option value="SG">🇸🇬 Singapore</option>
                             <option value="HK">🇭🇰 Hong Kong</option>
                             <option value="JP">🇯🇵 Japan</option>
@@ -92,29 +104,25 @@
                     <!-- Input Data -->
                     <div>
                         <label class="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase">
-                            <span>Dữ liệu cấu hình</span>
-                            <span id="hint" class="text-sky-500 lowercase normal-case"></span>
+                            <span>Dữ liệu đầu vào</span>
+                            <span id="hint" class="text-sky-500 normal-case"></span>
                         </label>
-                        <textarea id="inputData" rows="4" 
-                            class="w-full bg-slate-900 border border-slate-600 text-white rounded p-3 text-sm font-mono focus:border-sky-500 outline-none transition-colors"
+                        <textarea id="inputData" rows="3" 
+                            class="w-full bg-slate-900 border border-slate-600 text-white rounded p-3 text-sm font-mono focus:border-sky-500 outline-none"
                             placeholder=""></textarea>
                     </div>
 
-                    <button onclick="buyDevice()" id="btnBuy" class="w-full text-white bg-green-600 hover:bg-green-700 font-bold rounded p-3 text-sm transition-all shadow-lg active:scale-95 uppercase tracking-wide flex justify-center items-center gap-2">
-                        <span>Xác Nhận Mua</span> <i class="fa-solid fa-arrow-right"></i>
+                    <button onclick="buyDevice()" id="btnBuy" class="w-full text-white bg-green-600 hover:bg-green-700 font-bold rounded p-3 text-sm shadow-lg active:scale-95 uppercase flex justify-center items-center gap-2">
+                        <span>Xác Nhận Mua</span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Logs Console -->
-        <div class="bg-slate-900 rounded-lg border border-slate-800 p-4 mt-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Events</h3>
-                <button onclick="document.getElementById('logs').innerHTML=''" class="text-[10px] text-slate-500 hover:text-white uppercase">Clear Logs</button>
-            </div>
-            <div id="logs" class="h-24 overflow-y-auto font-mono text-[11px] p-2 bg-black rounded text-green-500 space-y-1 border border-slate-800">
-                <div class="opacity-50">> System initialized. Ready.</div>
+        <!-- Logs -->
+        <div class="bg-black rounded border border-slate-800 p-2 mt-4">
+            <div id="logs" class="h-20 overflow-y-auto font-mono text-[10px] text-green-500 space-y-1">
+                <div class="opacity-50">> System initialized.</div>
             </div>
         </div>
 
@@ -123,7 +131,7 @@
     <script>
         const API_INTERNAL = '/api';
 
-        // Cấu hình danh sách Server cứng để luôn hiển thị
+        // Dữ liệu cứng để hiển thị ngay lập tức
         const SERVER_LIST_DEF = [
             { key: "Singapore", name: "Singapore", flag: "🇸🇬", code: "SG" },
             { key: "Hong Kong", name: "Hong Kong", flag: "🇭🇰", code: "HK" },
@@ -132,105 +140,115 @@
             { key: "America",   name: "USA",       flag: "🇺🇸", code: "US" }
         ];
 
-        // Khởi tạo ngay khi trang tải xong
+        // Biến điều khiển Auto Refresh
+        let autoInterval = null;
+        let countdownInterval = null;
+        let timeLeft = 5;
+
         document.addEventListener('DOMContentLoaded', () => {
-            renderStatus({}); // Vẽ khung xám trước
-            checkStatus();    // Gọi API cập nhật màu sau
-            handleCloudChange(); // Cập nhật form
+            // 1. Vẽ khung xương ngay lập tức
+            renderStatus({}, true);
+            // 2. Gọi API lần đầu
+            checkStatus(false);
+            // 3. Setup form
+            handleCloudChange();
         });
 
-        function handleCloudChange() {
-            // Lấy value từ Radio Button đã chọn
-            const cloudId = document.querySelector('input[name="cloudType"]:checked').value;
-            
-            const sv = document.getElementById('serverContainer');
-            const hint = document.getElementById('hint');
-            const inp = document.getElementById('inputData');
+        // --- Logic Auto Refresh ---
+        function toggleAutoRefresh() {
+            const isChecked = document.getElementById('autoToggle').checked;
+            const countdownEl = document.getElementById('countdown');
 
-            if (cloudId === 'UG') {
-                sv.classList.remove('hidden');
-                inp.placeholder = "Dán chuỗi JSON Local Storage vào đây...";
-                hint.textContent = "(Yêu cầu: Local Storage Data)";
+            if (isChecked) {
+                log("Đã bật tự động cập nhật (mỗi 5s).");
+                checkStatus(true); // Check ngay 1 cái
+                
+                // Set interval loop
+                autoInterval = setInterval(() => {
+                    checkStatus(true);
+                    timeLeft = 5;
+                }, 5000);
+
+                // Set countdown UI loop
+                timeLeft = 5;
+                countdownInterval = setInterval(() => {
+                    timeLeft--;
+                    countdownEl.innerText = timeLeft + "s";
+                    if(timeLeft <= 0) timeLeft = 5;
+                }, 1000);
+
             } else {
-                sv.classList.add('hidden');
-                inp.placeholder = "Nhập: Tài khoản|Mật khẩu";
-                hint.textContent = "(Định dạng: User|Pass)";
+                log("Đã tắt tự động cập nhật.");
+                clearInterval(autoInterval);
+                clearInterval(countdownInterval);
+                countdownEl.innerText = "--";
             }
         }
 
-        function log(msg, isError = false) {
-            const logs = document.getElementById('logs');
-            const div = document.createElement('div');
-            const time = new Date().toLocaleTimeString('vi-VN', {hour12: false});
-            div.className = isError ? 'text-red-400' : 'text-green-400';
-            div.innerHTML = `<span class="text-slate-600 mr-2">[${time}]</span>${msg}`;
-            logs.prepend(div);
-        }
-
-        async function checkStatus() {
-            const btn = document.getElementById('btnCheck');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        // --- Logic API ---
+        async function checkStatus(isBackground = false) {
+            const statusContainer = document.getElementById('statusResult');
             
-            // Thêm hiệu ứng loading cho danh sách
-            document.getElementById('statusResult').classList.add('opacity-50');
+            // Nếu không phải chạy ngầm thì hiện loading mờ
+            if (!isBackground) {
+                statusContainer.classList.add('opacity-50');
+            }
 
             try {
                 const req = await fetch(`${API_INTERNAL}/status`);
                 const json = await req.json();
                 
-                // Nếu lấy được data (dù rỗng hay có)
+                document.getElementById('lastUpdate').textContent = "Cập nhật: " + new Date().toLocaleTimeString();
+
                 if (json.server_data) {
                     renderStatus(json.server_data);
                     updateSelectDropdown(json.server_data);
                     
-                    if(json.status === 'failed') {
-                        log("⚠️ Không kết nối được máy chủ gốc (Dữ liệu cũ).", true);
-                    } else {
-                        log("✅ Đã cập nhật trạng thái Server.");
-                    }
+                    if (!isBackground) log("✅ Đã cập nhật trạng thái.");
                 } else {
+                    // API trả về nhưng không có data -> Lỗi Token hoặc API đổi
                     renderStatus({}); 
-                    log("❌ Lỗi định dạng dữ liệu trả về.", true);
+                    log("⚠️ API trả về rỗng. Kiểm tra Token trong Vercel.", true);
                 }
 
             } catch (e) {
                 renderStatus({}); 
-                log("❌ Lỗi kết nối API nội bộ.", true);
+                log("❌ Lỗi kết nối mạng hoặc API Backend chết.", true);
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-sync"></i> Refresh';
-                document.getElementById('statusResult').classList.remove('opacity-50');
+                statusContainer.classList.remove('opacity-50');
             }
         }
 
-        function renderStatus(apiData) {
+        function renderStatus(apiData, isFirstLoad = false) {
             const container = document.getElementById('statusResult');
             container.innerHTML = '';
 
             SERVER_LIST_DEF.forEach(server => {
                 const isOnline = apiData[server.key] === true;
+                // Nếu apiData rỗng (lỗi) hoặc key không tồn tại -> Unknown
                 const isUnknown = apiData[server.key] === undefined;
 
-                let colorClass = '';
-                let statusBadge = '';
-                
-                if (isUnknown) {
+                let colorClass, statusBadge;
+
+                if (isFirstLoad || isUnknown) {
+                    // Trạng thái chưa rõ (Màu xám)
                     colorClass = 'border-slate-700 bg-slate-800 text-slate-500';
-                    statusBadge = '<span class="text-xs bg-slate-700 text-slate-400 px-2 py-0.5 rounded">Checking...</span>';
+                    statusBadge = '<span class="text-[10px] bg-slate-700 text-slate-400 px-2 py-1 rounded">CHECKING</span>';
                 } else if (isOnline) {
-                    colorClass = 'border-green-600/50 bg-green-900/10 text-green-400 shadow-[0_0_10px_rgba(74,222,128,0.1)]';
-                    statusBadge = '<span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-bold">ONLINE</span>';
+                    // Có hàng (Màu xanh sáng)
+                    colorClass = 'border-green-500 bg-green-900/20 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)] transform scale-[1.02]';
+                    statusBadge = '<span class="text-[10px] bg-green-600 text-white px-2 py-1 rounded font-bold animate-pulse">CÒN MÁY</span>';
                 } else {
-                    colorClass = 'border-red-900/50 bg-red-900/10 text-red-400 opacity-75';
-                    statusBadge = '<span class="text-xs bg-red-900/30 text-red-400 px-2 py-0.5 rounded">SOLD OUT</span>';
+                    // Hết hàng (Màu đỏ tối)
+                    colorClass = 'border-red-900/50 bg-red-900/10 text-red-500 opacity-60';
+                    statusBadge = '<span class="text-[10px] bg-red-900/50 text-red-400 px-2 py-1 rounded">HẾT MÁY</span>';
                 }
 
                 const item = document.createElement('div');
                 item.className = `flex justify-between items-center p-3 rounded border transition-all duration-300 ${colorClass}`;
                 item.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <span class="text-xl filter drop-shadow-md">${server.flag}</span>
+                        <span class="text-xl">${server.flag}</span>
                         <span class="font-medium text-sm">${server.name}</span>
                     </div> 
                     <div>${statusBadge}</div>`;
@@ -238,37 +256,49 @@
             });
         }
 
-        // Hàm cập nhật dropdown chọn Server dựa trên trạng thái
         function updateSelectDropdown(apiData) {
             const select = document.getElementById('serverRegion');
-            const currentValue = select.value;
-            select.innerHTML = ''; // Xóa cũ
+            const current = select.value;
+            select.innerHTML = ''; 
 
             SERVER_LIST_DEF.forEach(server => {
                 const isOnline = apiData[server.key] === true;
-                const isUnknown = apiData[server.key] === undefined;
-                
                 let text = `${server.flag} ${server.name}`;
-                let disabled = false;
-
-                if (!isUnknown) {
-                    if (isOnline) {
-                        text += " (✅ Sẵn sàng)";
-                    } else {
-                        text += " (❌ Hết hàng)";
-                        // disabled = true; // Có thể bỏ comment nếu muốn chặn chọn luôn
-                    }
+                if (apiData[server.key] !== undefined) {
+                    text += isOnline ? " (✅ Có máy)" : " (❌ Hết)";
                 }
-
-                const option = document.createElement('option');
-                option.value = server.code;
-                option.textContent = text;
-                option.disabled = disabled;
-                select.appendChild(option);
+                const opt = document.createElement('option');
+                opt.value = server.code;
+                opt.textContent = text;
+                select.appendChild(opt);
             });
+            select.value = current;
+        }
 
-            // Giữ lại lựa chọn cũ nếu nó chưa bị disable
-            select.value = currentValue;
+        function handleCloudChange() {
+            const cloudId = document.querySelector('input[name="cloudType"]:checked').value;
+            const sv = document.getElementById('serverContainer');
+            const hint = document.getElementById('hint');
+            const inp = document.getElementById('inputData');
+
+            if (cloudId === 'UG') {
+                sv.classList.remove('hidden');
+                inp.placeholder = '{"token": "..."}';
+                hint.textContent = "(Local Storage JSON)";
+            } else {
+                sv.classList.add('hidden');
+                inp.placeholder = "User|Pass";
+                hint.textContent = "(Tài khoản|Mật khẩu)";
+            }
+        }
+
+        function log(msg, isError = false) {
+            const logs = document.getElementById('logs');
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString('vi-VN', {hour12: false});
+            div.className = isError ? 'text-red-400 font-bold' : 'text-green-500';
+            div.innerHTML = `<span class="text-slate-600 mr-2">[${time}]</span>${msg}`;
+            logs.prepend(div);
         }
 
         async function buyDevice() {
@@ -277,17 +307,11 @@
             const inputData = document.getElementById('inputData').value;
             const serverCode = document.getElementById('serverRegion').value;
             
-            if(!inputData.trim()) {
-                log("⚠️ Vui lòng nhập dữ liệu đầu vào!", true);
-                document.getElementById('inputData').focus();
-                document.getElementById('inputData').classList.add('border-red-500');
-                setTimeout(() => document.getElementById('inputData').classList.remove('border-red-500'), 2000);
-                return;
-            }
+            if(!inputData.trim()) return alert("Thiếu dữ liệu đầu vào!");
 
             btn.disabled = true;
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang xử lý...';
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Xử lý...';
             
             try {
                 const req = await fetch(`${API_INTERNAL}/buy`, {
@@ -302,16 +326,14 @@
                 const json = await req.json();
 
                 if(json.success) {
-                    log(`✅ THÀNH CÔNG: ${json.message}`);
-                    alert("Mua thành công!\n" + json.message);
-                    // Refresh lại status sau khi mua
-                    if(cloudId === 'UG') setTimeout(checkStatus, 2000);
+                    log(`✅ Mua thành công: ${json.message}`);
+                    alert(json.message);
                 } else {
-                    log(`🛑 THẤT BẠI: ${json.message}`, true);
-                    alert("Lỗi: " + json.message);
+                    log(`🛑 Lỗi mua: ${json.message}`, true);
+                    alert(json.message);
                 }
             } catch (e) {
-                log("❌ Lỗi hệ thống khi gọi mua.", true);
+                log("❌ Lỗi hệ thống.", true);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
