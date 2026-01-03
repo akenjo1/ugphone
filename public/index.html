@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDK (Phiên bản Compat để chạy trực tiếp trên trình duyệt) -->
+    <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -35,7 +35,7 @@
                     <span id="userBalance" class="font-bold text-yellow-400 text-sm">0</span>
                 </div>
                 <img id="userAvatar" src="" class="w-8 h-8 rounded-full border-2 border-slate-600">
-                <button onclick="firebase.auth().signOut()" class="text-slate-400 hover:text-red-400 ml-1">
+                <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-1">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
@@ -51,6 +51,8 @@
             <button onclick="loginGoogle()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
                 Bắt đầu ngay
             </button>
+            <!-- Debug Info -->
+            <p class="mt-4 text-[10px] text-sky-200/50">Current Domain: <span id="debugDomain">Checking...</span></p>
         </div>
 
         <!-- Khu vực kiếm tiền -->
@@ -137,9 +139,7 @@
     </div>
 
     <script>
-        // =========================================================
-        // CẤU HÌNH FIREBASE CỦA BẠN (Đã cập nhật)
-        // =========================================================
+        // CẤU HÌNH TỪ BẠN CUNG CẤP (Đã kiểm tra)
         const firebaseConfig = {
           apiKey: "AIzaSyAMN-_pwnxFtAjX3DPnZKIijscpdicEwlw",
           authDomain: "ugphone-8879f.firebaseapp.com",
@@ -148,15 +148,8 @@
           messagingSenderId: "233888764150",
           appId: "1:233888764150:web:dbc486f46d850fb97d5cd7"
         };
-        // =========================================================
 
-        // Khởi tạo Firebase
-        try {
-            firebase.initializeApp(firebaseConfig);
-        } catch (error) {
-            console.error("Firebase init error:", error);
-        }
-
+        firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
@@ -171,8 +164,13 @@
             const earnSection = document.getElementById('earnSection');
             const shopSection = document.getElementById('shopSection');
 
+            // Debug Domain
+            const currentDomain = window.location.hostname;
+            const debugEl = document.getElementById('debugDomain');
+            if(debugEl) debugEl.innerText = currentDomain;
+
             if (user) {
-                // ĐÃ ĐĂNG NHẬP
+                // LOGGED IN
                 currentUser = user;
                 authBtn.classList.add('hidden');
                 welcomeBanner.classList.add('hidden');
@@ -183,7 +181,6 @@
                 
                 document.getElementById('userAvatar').src = user.photoURL || 'https://via.placeholder.com/32';
                 
-                // Lắng nghe số dư
                 if(unsubscribeBalance) unsubscribeBalance();
                 unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot(doc => {
                     const data = doc.data();
@@ -192,7 +189,7 @@
                 });
 
             } else {
-                // CHƯA ĐĂNG NHẬP
+                // LOGGED OUT
                 currentUser = null;
                 if(unsubscribeBalance) unsubscribeBalance();
                 
@@ -205,18 +202,37 @@
             }
         });
 
+        // HÀM LOGIN ĐÃ CẬP NHẬT
         function loginGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(err => {
+            // Sử dụng Redirect thay vì Popup để tránh lỗi chặn popup
+            auth.signInWithRedirect(provider).catch(err => {
                 console.error(err);
                 let msg = err.message;
-                if(msg.includes('unauthorized-domain')) msg = "Lỗi: Tên miền web chưa được thêm vào Firebase Authorized Domains.";
+                // Bắt lỗi Domain cụ thể để báo cho user
+                if(msg.includes('unauthorized-domain')) {
+                    const domain = window.location.hostname;
+                    msg = `Lỗi Domain: Hãy thêm "${domain}" vào Firebase Console -> Auth -> Settings -> Authorized Domains`;
+                }
                 showToast('Lỗi Đăng Nhập', msg, 'error');
             });
         }
+        
+        // Xử lý kết quả sau khi Redirect
+        auth.getRedirectResult().catch(err => {
+             let msg = err.message;
+             if(msg.includes('unauthorized-domain')) {
+                const domain = window.location.hostname;
+                msg = `Lỗi Domain: Hãy thêm "${domain}" vào Firebase Console`;
+             }
+             showToast('Lỗi Đăng Nhập', msg, 'error');
+        });
 
-        // --- LOGIC BACKEND ---
+        function logout() {
+            auth.signOut();
+        }
 
+        // --- BACKEND LOGIC ---
         async function generateLink() {
             if(!currentUser) return;
             const btn = document.getElementById('btnGenLink');
@@ -285,7 +301,7 @@
             if(!inputData) return showToast('Thiếu Thông Tin', 'Vui lòng nhập dữ liệu cấu hình', 'warning');
 
             const currentBal = parseInt(document.getElementById('userBalance').innerText);
-            if(currentBal < 500) return showToast('Không Đủ Xu', 'Bạn cần 500 Xu. Hãy vượt link kiếm thêm!', 'error');
+            if(currentBal < 500) return showToast('Không Đủ Xu', 'Bạn cần 500 Xu.', 'error');
 
             if(!confirm("Xác nhận mua máy với giá 500 Xu?")) return;
 
@@ -326,7 +342,6 @@
             else svDiv.classList.add('hidden');
         }
 
-        // --- UTILS ---
         function showToast(title, msg, type) {
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toastIcon');
