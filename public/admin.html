@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Tạo Giftcode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md border border-gray-700">
+        <h1 class="text-2xl font-bold mb-6 text-center text-red-500">ADMIN PANEL</h1>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm mb-1">Mã Giftcode</label>
+                <input type="text" id="code" placeholder="VD: TET2024" class="w-full bg-gray-900 border border-gray-600 rounded p-2 uppercase">
+            </div>
+            
+            <div>
+                <label class="block text-sm mb-1">Số lượng người được nhập</label>
+                <input type="number" id="max_users" placeholder="VD: 100" class="w-full bg-gray-900 border border-gray-600 rounded p-2">
+            </div>
+
+            <div>
+                <label class="block text-sm mb-1">Số Xu thưởng mỗi người</label>
+                <input type="number" id="amount" placeholder="VD: 500" class="w-full bg-gray-900 border border-gray-600 rounded p-2">
+            </div>
+
+            <div class="pt-4 border-t border-gray-700">
+                <label class="block text-sm mb-1 text-yellow-500">Mật khẩu Admin (Vercel Env)</label>
+                <input type="password" id="admin_password" class="w-full bg-gray-900 border border-yellow-600 rounded p-2">
+            </div>
+
+            <button onclick="createCode()" id="btnCreate" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded">
+                TẠO MÃ NGAY
+            </button>
+        </div>
+    </div>
+
+    <script>
+        async function createCode() {
+            const btn = document.getElementById('btnCreate');
+            const data = {
+                code: document.getElementById('code').value,
+                max_users: document.getElementById('max_users').value,
+                amount: document.getElementById('amount').value,
+                admin_password: document.getElementById('admin_password').value
+            };
+
+            if(!data.code || !data.max_users || !data.amount || !data.admin_password) {
+                alert("Vui lòng nhập đủ thông tin");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Đang xử lý...";
+
+            try {
+                const res = await fetch('/api/create-code', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const json = await res.json();
+                
+                if(json.success) {
+                    alert(json.message);
+                } else {
+                    alert("Lỗi: " + json.error);
+                }
+            } catch(e) {
+                alert("Lỗi kết nối");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "TẠO MÃ NGAY";
+            }
+        }
+    </script>
+</body>
+</html>
+
