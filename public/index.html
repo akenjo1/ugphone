@@ -13,15 +13,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <style>
-        /* Hiệu ứng khi tiền về */
         @keyframes coin-pop {
-            0% { transform: scale(1); color: #FACC15; } /* Màu vàng gốc */
-            50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } /* Phóng to + Màu xanh */
+            0% { transform: scale(1); color: #FACC15; }
+            50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; }
             100% { transform: scale(1); color: #FACC15; }
         }
-        .money-update {
-            animation: coin-pop 0.5s ease-in-out;
-        }
+        .money-update { animation: coin-pop 0.5s ease-in-out; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
@@ -40,9 +37,8 @@
             </div>
 
             <div id="userPanel" class="hidden flex items-center gap-3">
-                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2 transition-all duration-300" id="balanceContainer">
+                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2" id="balanceContainer">
                     <i class="fa-solid fa-coins text-yellow-400"></i>
-                    <!-- Số dư -->
                     <span id="userBalance" class="font-bold text-yellow-400 text-sm transition-all">0</span>
                 </div>
                 <img id="userAvatar" src="" class="w-8 h-8 rounded-full border-2 border-slate-600">
@@ -79,8 +75,14 @@
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-link text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Vượt Link Ngắn</h3>
                 <p class="text-xs text-slate-400 mb-4">Nhận <span class="text-yellow-400 font-bold">100 Xu</span>/lượt. Tối đa 3 lượt/ngày.</p>
-                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2">
+                
+                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
+                </button>
+
+                <!-- NÚT HƯỚNG DẪN MỚI -->
+                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2">
+                    <i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn
                 </button>
             </div>
 
@@ -134,6 +136,54 @@
         </div>
     </div>
 
+    <!-- MODAL HƯỚNG DẪN -->
+    <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)">
+        <div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()">
+            <button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+            
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link
+            </h3>
+
+            <div class="space-y-4 text-sm text-slate-300">
+                <div class="flex gap-3">
+                    <div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div>
+                    <div>
+                        <p class="font-bold text-white">Bấm "Lấy Link Vượt"</p>
+                        <p class="text-xs mt-1">Hệ thống sẽ mở một tab mới dẫn đến trang rút gọn.</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div>
+                    <div>
+                        <p class="font-bold text-white">Xác thực Captcha</p>
+                        <p class="text-xs mt-1">Tìm và tích vào ô <span class="bg-white text-slate-800 px-1 rounded font-bold">I'm not a robot</span> (Tôi không phải người máy).</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div>
+                    <div>
+                        <p class="font-bold text-white">Chờ đếm ngược & Lấy Link</p>
+                        <p class="text-xs mt-1">Chờ khoảng 10-15 giây, sau đó kéo xuống dưới tìm nút <span class="bg-green-600 text-white px-1 rounded font-bold">Get Link</span>.</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">4</div>
+                    <div>
+                        <p class="font-bold text-white">Copy Mã & Nhập Thưởng</p>
+                        <p class="text-xs mt-1">Copy mã 6 chữ số hiện ra, quay lại đây dán vào ô nhập code để nhận 100 Xu.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center">
+                <button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-24 opacity-0 transition-all duration-300 z-50 max-w-sm flex items-start gap-3">
         <div id="toastIcon" class="mt-1"></div>
@@ -159,7 +209,7 @@
 
         let currentUser = null;
         let unsubscribeBalance = null;
-        let previousBalance = -1; // Để theo dõi thay đổi
+        let previousBalance = -1;
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('currentDomain').innerText = window.location.hostname;
@@ -173,34 +223,22 @@
                     
                     if(unsubscribeBalance) unsubscribeBalance();
                     
-                    // --- TỰ ĐỘNG CẬP NHẬT SỐ DƯ (REALTIME) ---
                     unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot((doc) => {
                         const balEl = document.getElementById('userBalance');
-                        const balContainer = document.getElementById('balanceContainer');
-                        
                         let balance = 0;
-                        if (doc.exists) {
-                            balance = doc.data().balance || 0;
-                        }
-
-                        // Cập nhật số
+                        if (doc.exists) balance = doc.data().balance || 0;
                         balEl.innerText = balance;
 
-                        // Nếu số dư thay đổi (khác lần trước) -> Chạy hiệu ứng
                         if (previousBalance !== -1 && balance !== previousBalance) {
-                            // Reset animation
                             balEl.classList.remove('money-update');
-                            void balEl.offsetWidth; // Trigger reflow
+                            void balEl.offsetWidth; 
                             balEl.classList.add('money-update');
-                            
-                            // Nếu được cộng tiền -> Hiện Toast báo
                             if(balance > previousBalance) {
                                 showToast('Ting ting!', `+${balance - previousBalance} Xu`, 'success');
                             }
                         }
                         previousBalance = balance;
                     });
-
                 } else {
                     currentUser = null;
                     toggleUI(false);
@@ -209,7 +247,18 @@
             });
         });
 
-        // ... Các hàm Login, Logout, UI giữ nguyên ...
+        // --- HƯỚNG DẪN MODAL ---
+        function openGuide() {
+            document.getElementById('guideModal').classList.remove('hidden');
+        }
+        function closeGuide(e) {
+            // Nếu bấm vào nền đen hoặc nút đóng thì mới đóng
+            if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) {
+                document.getElementById('guideModal').classList.add('hidden');
+            }
+        }
+
+        // ... Các hàm cũ giữ nguyên ...
         function loginGoogle() {
             const btn = document.getElementById('btnLogin');
             if(btn) btn.innerHTML = '...';
@@ -267,7 +316,6 @@
                 if(data.success) { 
                     showToast('Thành công', data.message, 'success'); 
                     document.getElementById('promoCode').value = '';
-                    // Không cần làm gì thêm, onSnapshot sẽ tự cập nhật số dư
                 } else { 
                     showToast('Lỗi', data.error, 'error'); 
                 }
@@ -279,12 +327,9 @@
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
             if(!inputData) return showToast('Thiếu tin', 'Nhập dữ liệu', 'warning');
-            
             const currentBal = parseInt(document.getElementById('userBalance').innerText) || 0;
             if(currentBal < 50) return showToast('Thiếu Xu', 'Cần 50 Xu', 'error');
-            
             if(!confirm("Mua máy với giá 50 Xu?")) return;
-            
             const btn = document.getElementById('btnBuy');
             btn.disabled = true; btn.innerHTML = 'Đang xử lý...';
             try {
