@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mã Thưởng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
+    <div class="bg-slate-800 p-8 rounded-xl text-center shadow-2xl border border-slate-700 w-full max-w-md">
+        <div class="mb-4">
+            <i class="fa-solid fa-gift text-4xl text-yellow-400"></i>
+        </div>
+        <h1 class="text-xl font-bold mb-2 text-white">Mã xác nhận của bạn</h1>
+        <p class="text-slate-400 text-sm mb-6">Mã này chỉ có hiệu lực trong 15 phút và chỉ dùng được 1 lần.</p>
+        
+        <div class="bg-black/50 p-4 rounded-lg border border-dashed border-slate-600 mb-6 relative group cursor-pointer" onclick="copyCode()">
+            <div id="codeDisplay" class="text-3xl font-mono text-green-400 font-bold tracking-widest select-all">
+                LOADING...
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                <span class="text-white text-sm font-bold"><i class="fa-regular fa-copy"></i> Nhấn để chép</span>
+            </div>
+        </div>
+
+        <button onclick="window.close()" class="text-slate-500 hover:text-slate-300 text-sm underline">Đóng trang này</button>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('c');
+        const display = document.getElementById('codeDisplay');
+        
+        if(code) {
+            display.textContent = code;
+        } else {
+            display.textContent = "ERROR";
+            display.classList.add('text-red-500');
+        }
+
+        function copyCode() {
+            if(code) {
+                navigator.clipboard.writeText(code);
+                alert("Đã copy mã: " + code + "\nHãy quay lại web chính để nhập.");
+            }
+        }
+    </script>
+</body>
+</html>
+
+
