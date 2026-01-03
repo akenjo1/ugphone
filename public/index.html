@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDK (Chỉ cần Client SDK để Auth) -->
+    <!-- Firebase SDK (Phiên bản Compat để chạy trực tiếp trên trình duyệt) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -44,7 +44,7 @@
 
     <div class="max-w-4xl mx-auto p-4 space-y-8 pb-20">
 
-        <!-- Banner Chào mừng (Hiện khi chưa đăng nhập) -->
+        <!-- Banner Chào mừng -->
         <div id="welcomeBanner" class="bg-gradient-to-r from-sky-600 to-indigo-700 rounded-2xl p-8 text-center shadow-xl hidden">
             <h1 class="text-2xl font-bold mb-2">Miễn Phí Cloud VPS & Device</h1>
             <p class="text-sky-100 mb-6 text-sm">Vượt link kiếm xu - Đổi máy tự động - Không cần nạp tiền</p>
@@ -53,7 +53,7 @@
             </button>
         </div>
 
-        <!-- Khu vực kiếm tiền (Chỉ hiện khi đã đăng nhập) -->
+        <!-- Khu vực kiếm tiền -->
         <div id="earnSection" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Box 1: Vượt Link -->
             <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden group">
@@ -83,7 +83,7 @@
             </div>
         </div>
 
-        <!-- Khu vực Mua Máy (Chỉ hiện khi đã đăng nhập) -->
+        <!-- Khu vực Mua Máy -->
         <div id="shopSection" class="hidden bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
             <div class="bg-slate-700/50 p-4 border-b border-slate-700 flex justify-between items-center">
                 <h2 class="font-bold text-white flex items-center gap-2">
@@ -93,7 +93,6 @@
             </div>
             
             <div class="p-6 space-y-5">
-                <!-- Chọn Loại & Server -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Loại thiết bị</label>
@@ -115,13 +114,11 @@
                     </div>
                 </div>
 
-                <!-- Input Data -->
                 <div>
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình <span class="text-sky-500 normal-case italic ml-1">(Local Storage JSON)</span></label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
 
-                <!-- Button Mua -->
                 <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
                     <i class="fa-solid fa-cart-plus"></i> Mua Ngay (500 Xu)
                 </button>
@@ -141,21 +138,25 @@
 
     <script>
         // =========================================================
-        // THAY THẾ CONFIG FIREBASE CỦA BẠN VÀO ĐÂY
-        // Lấy tại: Firebase Console -> Project Settings -> General -> Web App
+        // CẤU HÌNH FIREBASE CỦA BẠN (Đã cập nhật)
         // =========================================================
         const firebaseConfig = {
-            apiKey: "AIzaSyAMN-_pwnxFtAjX3DPnZKIijscpdicEwlw",
-  authDomain: "ugphone-8879f.firebaseapp.com",
-  projectId: "ugphone-8879f",
-  storageBucket: "ugphone-8879f.firebasestorage.app",
-  messagingSenderId: "233888764150",
-  appId: "1:233888764150:web:dbc486f46d850fb97d5cd7"
-};
+          apiKey: "AIzaSyAMN-_pwnxFtAjX3DPnZKIijscpdicEwlw",
+          authDomain: "ugphone-8879f.firebaseapp.com",
+          projectId: "ugphone-8879f",
+          storageBucket: "ugphone-8879f.firebasestorage.app",
+          messagingSenderId: "233888764150",
+          appId: "1:233888764150:web:dbc486f46d850fb97d5cd7"
+        };
         // =========================================================
 
-        // Initialize Firebase Client
-        firebase.initializeApp(firebaseConfig);
+        // Khởi tạo Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (error) {
+            console.error("Firebase init error:", error);
+        }
+
         const auth = firebase.auth();
         const db = firebase.firestore();
 
@@ -171,7 +172,7 @@
             const shopSection = document.getElementById('shopSection');
 
             if (user) {
-                // LOGGED IN
+                // ĐÃ ĐĂNG NHẬP
                 currentUser = user;
                 authBtn.classList.add('hidden');
                 welcomeBanner.classList.add('hidden');
@@ -182,17 +183,16 @@
                 
                 document.getElementById('userAvatar').src = user.photoURL || 'https://via.placeholder.com/32';
                 
-                // Realtime Balance Listener
+                // Lắng nghe số dư
                 if(unsubscribeBalance) unsubscribeBalance();
                 unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot(doc => {
                     const data = doc.data();
                     const bal = data ? (data.balance || 0) : 0;
-                    // Animation đếm số
                     animateValue("userBalance", parseInt(document.getElementById('userBalance').innerText), bal, 1000);
                 });
 
             } else {
-                // LOGGED OUT
+                // CHƯA ĐĂNG NHẬP
                 currentUser = null;
                 if(unsubscribeBalance) unsubscribeBalance();
                 
@@ -207,10 +207,15 @@
 
         function loginGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(err => showToast('Lỗi Đăng Nhập', err.message, 'error'));
+            auth.signInWithPopup(provider).catch(err => {
+                console.error(err);
+                let msg = err.message;
+                if(msg.includes('unauthorized-domain')) msg = "Lỗi: Tên miền web chưa được thêm vào Firebase Authorized Domains.";
+                showToast('Lỗi Đăng Nhập', msg, 'error');
+            });
         }
 
-        // --- CHỨC NĂNG CHÍNH ---
+        // --- LOGIC BACKEND ---
 
         async function generateLink() {
             if(!currentUser) return;
@@ -236,7 +241,7 @@
                 } else {
                     showToast('Thất Bại', data.error, 'error');
                 }
-            } catch(e) { showToast('Lỗi Mạng', 'Không thể kết nối server', 'error'); }
+            } catch(e) { showToast('Lỗi Mạng', 'Không thể kết nối server backend', 'error'); }
             finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;
@@ -279,7 +284,6 @@
             const inputData = document.getElementById('inputData').value.trim();
             if(!inputData) return showToast('Thiếu Thông Tin', 'Vui lòng nhập dữ liệu cấu hình', 'warning');
 
-            // Kiểm tra số dư UI trước (Backend sẽ check lại)
             const currentBal = parseInt(document.getElementById('userBalance').innerText);
             if(currentBal < 500) return showToast('Không Đủ Xu', 'Bạn cần 500 Xu. Hãy vượt link kiếm thêm!', 'error');
 
