@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/status",
+      "destination": "/api/status.js"
+    },
+    {
+      "source": "/api/buy",
+      "destination": "/api/buy.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/public/$1"
+    }
+  ]
+}
