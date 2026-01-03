@@ -1,17 +1,8 @@
 {
-  "version": 2,
   "rewrites": [
-    {
-      "source": "/api/status",
-      "destination": "/api/status.js"
-    },
-    {
-      "source": "/api/buy",
-      "destination": "/api/buy.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/public/$1"
-    }
+    { "source": "/api/buy", "destination": "/api/buy.js" },
+    { "source": "/api/gen-link", "destination": "/api/gen_link.js" },
+    { "source": "/api/claim", "destination": "/api/claim.js" },
+    { "source": "/(.*)", "destination": "/public/$1" }
   ]
 }
