@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buy UGPhone</title>
+    <title>Cloud VPS Shop</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
@@ -27,7 +27,7 @@
     <nav class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
         <div class="max-w-4xl mx-auto px-4 h-16 flex justify-between items-center">
             <div class="font-black text-sky-500 text-xl tracking-tight flex items-center gap-2">
-                <i class="fa-solid fa-cloud"></i> Buy UGPhone
+                <i class="fa-solid fa-cloud"></i> Buy Device
             </div>
             
             <div id="authBtn" class="hidden">
@@ -59,12 +59,13 @@
     <div class="max-w-4xl mx-auto p-4 space-y-8 pb-20">
         <!-- Banner -->
         <div id="welcomeBanner" class="bg-gradient-to-r from-sky-600 to-indigo-700 rounded-2xl p-8 text-center shadow-xl hidden">
-            <h1 class="text-2xl font-bold mb-2">Mua Máy UGPhone VSPhone Miễn Phí</h1>
+            <h1 class="text-2xl font-bold mb-2">Mua Máy UG Phone & VS Phone Miễn Phí</h1>
             <p class="text-sky-100 mb-6 text-sm">Vượt link kiếm xu - Đổi máy tự động</p>
             <button onclick="loginGoogle()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
                 <i class="fa-brands fa-google"></i> Bắt đầu ngay
             </button>
             <div class="mt-6 p-2 bg-black/30 rounded border border-white/10 text-[10px] text-slate-400 inline-block">
+                
             </div>
         </div>
 
@@ -79,7 +80,6 @@
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
                 </button>
 
-                <!-- NÚT HƯỚNG DẪN MỚI -->
                 <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2">
                     <i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn
                 </button>
@@ -88,7 +88,7 @@
             <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden">
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-barcode text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Nhập Mã Code</h3>
-                <p class="text-xs text-slate-400 mb-4">Nhập mã nhận được sau khi vượt link.</p>
+                <p class="text-xs text-slate-400 mb-4">Nhập mã nhận được sau khi vượt link hoặc code.</p>
                 <div class="flex gap-2">
                     <input type="text" id="promoCode" placeholder="Nhập mã..." class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 text-sm text-center uppercase tracking-widest font-mono focus:border-green-500 outline-none">
                     <button onclick="submitCode()" id="btnSubmitCode" class="bg-green-600 hover:bg-green-500 text-white px-4 rounded-lg text-sm font-bold shadow-lg">Nhận</button>
@@ -107,9 +107,9 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Loại thiết bị</label>
                         <select id="cloudId" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm focus:border-sky-500 outline-none" onchange="toggleServer()">
-                            <option value="UG">UGPhone (Android Cloud)</option>
-                            <option value="VS">VsPhone</option>
-                            <option value="VM">VMOS Virtual</option>
+                            <option value="UG">UGPhone( hoạt động )</option>
+                            <option value="VS">VsPhone( chưa test )</option>
+                            <option value="VM">VMOS Virtual( chưa test )</option>
                         </select>
                     </div>
                     <div id="serverDiv">
@@ -138,53 +138,19 @@
     <!-- MODAL HƯỚNG DẪN -->
     <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)">
         <div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()">
-            <button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white">
-                <i class="fa-solid fa-times text-xl"></i>
-            </button>
-            
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link
-            </h3>
-
+            <button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link</h3>
             <div class="space-y-4 text-sm text-slate-300">
-                <div class="flex gap-3">
-                    <div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div>
-                    <div>
-                        <p class="font-bold text-white">Bấm "Lấy Link Vượt"</p>
-                        <p class="text-xs mt-1">Hệ thống sẽ mở một tab mới dẫn đến trang rút gọn.</p>
-                    </div>
-                </div>
-                <div class="flex gap-3">
-                    <div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div>
-                    <div>
-                        <p class="font-bold text-white">Xác thực Captcha</p>
-                        <p class="text-xs mt-1">Tìm và tích vào ô <span class="bg-white text-slate-800 px-1 rounded font-bold">I'm not a robot</span> (Tôi không phải người máy).</p>
-                    </div>
-                </div>
-                <div class="flex gap-3">
-                    <div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div>
-                    <div>
-                        <p class="font-bold text-white">Chờ đếm ngược & Lấy Link</p>
-                        <p class="text-xs mt-1">Chờ khoảng 10-15 giây, sau đó kéo xuống dưới tìm nút <span class="bg-green-600 text-white px-1 rounded font-bold">Get Link</span>.</p>
-                    </div>
-                </div>
-                <div class="flex gap-3">
-                    <div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">4</div>
-                    <div>
-                        <p class="font-bold text-white">Copy Mã & Nhập Thưởng</p>
-                        <p class="text-xs mt-1">Copy mã 6 chữ số hiện ra, quay lại đây dán vào ô nhập code để nhận 100 Xu.</p>
-                    </div>
-                </div>
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div><div><p class="font-bold text-white">Bấm "Lấy Link Vượt"</p><p class="text-xs mt-1">Hệ thống mở tab mới đến trang rút gọn.</p></div></div>
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div><div><p class="font-bold text-white">Xác thực & Chờ đợi</p><p class="text-xs mt-1">Tích vào "I'm not a robot" và chờ đếm ngược.</p></div></div>
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div><div><p class="font-bold text-white">Lấy Mã & Nhập Thưởng</p><p class="text-xs mt-1">Copy mã 6 số, quay lại đây nhập để nhận 100 Xu.</p></div></div>
             </div>
-
-            <div class="mt-6 text-center">
-                <button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button>
-            </div>
+            <div class="mt-6 text-center"><button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button></div>
         </div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-24 opacity-0 transition-all duration-300 z-50 max-w-sm flex items-start gap-3">
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-32 opacity-0 transition-all duration-500 z-50 max-w-sm flex items-start gap-3">
         <div id="toastIcon" class="mt-1"></div>
         <div>
             <div id="toastTitle" class="font-bold text-sm"></div>
@@ -209,6 +175,7 @@
         let currentUser = null;
         let unsubscribeBalance = null;
         let previousBalance = -1;
+        let toastTimeout = null; // Biến để quản lý thời gian hiển thị thông báo
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('currentDomain').innerText = window.location.hostname;
@@ -246,18 +213,9 @@
             });
         });
 
-        // --- HƯỚNG DẪN MODAL ---
-        function openGuide() {
-            document.getElementById('guideModal').classList.remove('hidden');
-        }
-        function closeGuide(e) {
-            // Nếu bấm vào nền đen hoặc nút đóng thì mới đóng
-            if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) {
-                document.getElementById('guideModal').classList.add('hidden');
-            }
-        }
+        function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
+        function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
 
-        // ... Các hàm cũ giữ nguyên ...
         function loginGoogle() {
             const btn = document.getElementById('btnLogin');
             if(btn) btn.innerHTML = '...';
@@ -355,12 +313,44 @@
             val === 'UG' ? svDiv.classList.remove('hidden') : svDiv.classList.add('hidden');
         }
 
+        // --- HÀM SHOW TOAST ĐÃ SỬA ---
         function showToast(title, msg, type) {
             const toast = document.getElementById('toast');
-            document.getElementById('toastTitle').innerText = title;
-            document.getElementById('toastMsg').innerText = msg;
-            toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-4 rounded-xl shadow-2xl border-l-4 translate-y-0 opacity-100 transition-all duration-300 z-50 max-w-sm flex items-start gap-3 ${type === 'success' ? 'border-green-500' : type === 'error' ? 'border-red-500' : 'border-yellow-500'}`;
-            setTimeout(() => { toast.classList.add('translate-y-24', 'opacity-0'); }, 4000);
+            const icon = document.getElementById('toastIcon');
+            const tTitle = document.getElementById('toastTitle');
+            const tMsg = document.getElementById('toastMessage') || document.getElementById('toastMsg'); // Fallback
+
+            // Set nội dung
+            tTitle.innerText = title;
+            tMsg.innerText = msg;
+
+            // Xóa class cũ
+            toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 transition-all duration-500 z-50 max-w-sm flex items-start gap-3`;
+            
+            // Set màu
+            if(type === 'success') {
+                toast.classList.add('border-green-500');
+                icon.innerHTML = '<i class="fa-solid fa-check-circle text-green-500 text-xl"></i>';
+            } else if(type === 'error') {
+                toast.classList.add('border-red-500');
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>';
+            } else {
+                toast.classList.add('border-yellow-500');
+                icon.innerHTML = '<i class="fa-solid fa-circle-info text-yellow-500 text-xl"></i>';
+            }
+
+            // HIỆN TOAST
+            // Xóa các class ẩn (translate/opacity)
+            toast.classList.remove('translate-y-32', 'opacity-0');
+            
+            // LOGIC TIME OUT 5s
+            // Nếu đang có bộ đếm cũ thì xóa đi (tránh bị tắt oan)
+            if (toastTimeout) clearTimeout(toastTimeout);
+
+            // Set bộ đếm mới 5 giây
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-32', 'opacity-0');
+            }, 5000); // 5000ms = 5 giây
         }
     </script>
 </body>
