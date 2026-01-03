@@ -1,39 +1,57 @@
 export default async function handler(req, res) {
-    // Chỉ cho phép phương thức POST
     if (req.method !== 'POST') {
-        return res.status(405).json({ success: false, message: 'Method not allowed' });
+        return res.status(405).json({ code: 405, msg: 'Method not allowed' });
     }
 
     const MY_HIDDEN_TOKEN = process.env.HOANG_CLOUD_TOKEN;
 
     if (!MY_HIDDEN_TOKEN) {
-        return res.status(500).json({ success: false, message: "Server chưa cấu hình Token" });
+        return res.status(500).json({ code: 500, msg: "Lỗi cấu hình hệ thống (Thiếu Token)" });
     }
 
-    // Lấy dữ liệu người dùng gửi lên (chỉ lấy cloud_id, server, input_data)
-    // KHÔNG lấy user_token từ người dùng gửi
     const { cloud_id, server, input_data } = req.body;
 
     const payload = {
-        user_token: MY_HIDDEN_TOKEN, // Token của bạn được chèn ở đây (Server-side)
+        user_token: MY_HIDDEN_TOKEN,
         cloud_id,
         server,
         input_data
     };
 
     try {
+        // 1. Gọi âm thầm đến nhà cung cấp gốc
         const response = await fetch('https://hoang.cloud/dev/buy_device_cloud', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
-        res.status(200).json(data);
+        // 2. Lấy dữ liệu gốc
+        const rawData = await response.json();
+
+        // 3. XỬ LÝ ẨN DANH (QUAN TRỌNG)
+        // Chúng ta không trả về rawData, mà tự tạo object mới
+        
+        if (rawData.success) {
+            // Nếu thành công -> Trả về thông báo chung chung
+            return res.status(200).json({
+                success: true,
+                // Tự viết lại thông báo, không dùng thông báo của họ
+                message: "Hệ thống đã tiếp nhận đơn hàng. Đang khởi tạo máy..." 
+            });
+        } else {
+            // Nếu thất bại -> Trả về lỗi chung chung hoặc map lại lỗi
+            // Ví dụ: họ trả về "Token sai", mình báo "Lỗi xác thực"
+            return res.status(400).json({
+                success: false,
+                message: "Không thể tạo máy lúc này. Vui lòng thử lại sau."
+                // Ta có thể log lỗi thật ra console của Vercel để mình tự xem, chứ ko gửi cho khách
+                // debug_info: rawData.message (Xóa dòng này khi chạy thật)
+            });
+        }
 
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        // Lỗi mạng hoặc server sập
+        res.status(500).json({ success: false, message: "Hệ thống đang bảo trì." });
     }
 }
