@@ -4,54 +4,73 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({error: 'Method Not Allowed'});
     
     const { uid, code } = req.body;
-    const REWARD_AMOUNT = 100; // Số Xu thưởng
-
     if (!uid || !code) return res.status(400).json({ error: "Thiếu thông tin" });
 
-    const codeRef = db.collection('pending_codes').doc(code.toUpperCase());
+    const codeInput = code.trim().toUpperCase();
     const userRef = db.collection('users').doc(uid);
 
     try {
         await db.runTransaction(async (t) => {
-            // 1. Đọc dữ liệu Code
-            const codeSnap = await t.get(codeRef);
-            if (!codeSnap.exists) {
-                throw new Error("Mã không tồn tại hoặc sai.");
+            // --- KIỂM TRA MÃ VƯỢT LINK (Ưu tiên 1) ---
+            const linkCodeRef = db.collection('pending_codes').doc(codeInput);
+            const linkCodeSnap = await t.get(linkCodeRef);
+
+            if (linkCodeSnap.exists) {
+                // ... (Logic cũ của mã vượt link) ...
+                const data = linkCodeSnap.data();
+                if (data.uid !== uid) throw new Error("Mã vượt link này không phải của bạn.");
+                if (!data.valid) throw new Error("Mã này đã dùng rồi.");
+                
+                // Cộng 100 Xu
+                const userSnap = await t.get(userRef);
+                const userData = userSnap.data() || {};
+                const currentBal = userData.balance || 0;
+
+                t.update(linkCodeRef, { valid: false, usedAt: new Date().toISOString() });
+                t.set(userRef, { balance: currentBal + 100 }, { merge: true });
+                
+                return "Nhận thành công 100 Xu từ vượt link!";
             }
 
-            const codeData = codeSnap.data();
+            // --- KIỂM TRA GIFTCODE (Ưu tiên 2) ---
+            const promoRef = db.collection('promo_codes').doc(codeInput);
+            const promoSnap = await t.get(promoRef);
 
-            // 2. Kiểm tra tính hợp lệ
-            if (codeData.uid !== uid) throw new Error("Mã này không phải của bạn.");
-            if (codeData.valid === false) throw new Error("Mã này ĐÃ ĐƯỢC SỬ DỤNG.");
-            if (Date.now() > codeData.expiresAt) throw new Error("Mã đã hết hạn (chỉ có hiệu lực 15 phút).");
+            if (promoSnap.exists) {
+                const pData = promoSnap.data();
+                
+                if (!pData.active) throw new Error("Mã này đang bị khóa.");
+                if (pData.used_count >= pData.max_uses) throw new Error("Mã này đã hết lượt sử dụng.");
+                
+                // Kiểm tra xem user này đã nhập chưa
+                const redeemedBy = pData.redeemed_by || [];
+                if (redeemedBy.includes(uid)) throw new Error("Bạn đã nhập mã này rồi!");
 
-            // 3. Đọc dữ liệu User để kiểm tra lại giới hạn ngày
-            const userSnap = await t.get(userRef);
-            const userData = userSnap.data() || {};
-            const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
-            
-            let currentCount = userData.daily_count || 0;
-            if (userData.last_date !== today) {
-                currentCount = 0;
+                // Cập nhật Giftcode
+                t.update(promoRef, {
+                    used_count: admin.firestore.FieldValue.increment(1),
+                    redeemed_by: admin.firestore.FieldValue.arrayUnion(uid)
+                });
+
+                // Cộng Xu cho user
+                const userSnap = await t.get(userRef);
+                const userData = userSnap.data() || {};
+                const currentBal = userData.balance || 0;
+                
+                t.set(userRef, { balance: currentBal + pData.reward }, { merge: true });
+
+                return `Chúc mừng! Bạn nhận được ${pData.reward} Xu.`;
             }
 
-            if (currentCount >= 3) throw new Error("Bạn đã đạt giới hạn nhận thưởng hôm nay.");
-
-            // 4. THỰC HIỆN GHI (Cập nhật tất cả cùng lúc)
-            
-            // Hủy mã ngay lập tức
-            t.update(codeRef, { valid: false, usedAt: Date.now() });
-
-            // Cộng tiền và tăng biến đếm
-            t.set(userRef, {
-                balance: (userData.balance || 0) + REWARD_AMOUNT,
-                daily_count: currentCount + 1,
-                last_date: today
-            }, { merge: true });
+            throw new Error("Mã không tồn tại hoặc không hợp lệ.");
         });
 
-        return res.status(200).json({ success: true, message: `Thành công! Bạn nhận được ${REWARD_AMOUNT} Xu.` });
+        // Nếu transaction thành công
+        // Vì trong transaction mình return string, nên nó sẽ trả về result
+        // Tuy nhiên cách viết trên trả về Promise, ta cần bắt message ở đây hơi khó trong JS thuần
+        // -> Sửa lại: Transaction thành công nghĩa là không throw Error.
+        
+        return res.status(200).json({ success: true, message: "Nhập mã thành công! Tiền đã được cộng." });
 
     } catch (e) {
         return res.status(400).json({ error: e.message });
