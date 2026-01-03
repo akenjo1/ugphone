@@ -3,341 +3,365 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Manager Auto</title>
+    <title>Cloud VPS Shop</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-        body { font-family: 'Roboto', sans-serif; }
-        
-        /* Toggle Switch CSS */
-        .toggle-checkbox:checked {
-            right: 0;
-            border-color: #10B981;
-        }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #10B981;
-        }
-    </style>
+    
+    <!-- Firebase SDK (Chỉ cần Client SDK để Auth) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-3 md:p-6">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans selection:bg-sky-500 selection:text-white">
 
-    <div class="max-w-6xl mx-auto space-y-6">
-        
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg">
-            <div class="mb-4 md:mb-0 text-center md:text-left">
-                <h1 class="text-2xl font-bold text-sky-500 uppercase tracking-wider"><i class="fa-solid fa-cloud"></i> Cloud Manager</h1>
-                <p class="text-slate-400 text-xs">Phiên bản tự động cập nhật</p>
+    <!-- Header -->
+    <nav class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex justify-between items-center">
+            <div class="font-black text-sky-500 text-xl tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-cloud"></i> CloudShop
             </div>
             
-            <!-- Auto Refresh Control -->
-            <div class="flex items-center gap-3 bg-slate-900 p-2 rounded border border-slate-600">
-                <span class="text-xs font-bold text-slate-300 uppercase">Tự động check (5s)</span>
-                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                    <input type="checkbox" name="toggle" id="autoToggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-0 top-0" onchange="toggleAutoRefresh()"/>
-                    <label for="autoToggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-600 cursor-pointer"></label>
+            <!-- Chưa đăng nhập -->
+            <div id="authBtn" class="hidden">
+                <button onclick="loginGoogle()" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-200 transition shadow-lg flex items-center gap-2">
+                    <i class="fa-brands fa-google text-red-500"></i> Đăng nhập
+                </button>
+            </div>
+
+            <!-- Đã đăng nhập -->
+            <div id="userPanel" class="hidden flex items-center gap-3">
+                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2">
+                    <i class="fa-solid fa-coins text-yellow-400"></i>
+                    <span id="userBalance" class="font-bold text-yellow-400 text-sm">0</span>
                 </div>
-                <div id="countdown" class="text-xs font-mono text-sky-400 w-8 text-right">--</div>
+                <img id="userAvatar" src="" class="w-8 h-8 rounded-full border-2 border-slate-600">
+                <button onclick="firebase.auth().signOut()" class="text-slate-400 hover:text-red-400 ml-1">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
             </div>
         </div>
+    </nav>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            <!-- Cột Trái: Trạng thái Server (Luôn hiển thị) -->
-            <div class="lg:col-span-5 bg-slate-800 rounded-lg p-5 shadow-xl border border-slate-700 flex flex-col">
-                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-700">
-                    <h2 class="text-sm font-bold text-white uppercase"><i class="fa-solid fa-server mr-2"></i> Live Status</h2>
-                    <span id="lastUpdate" class="text-[10px] text-slate-500 italic">Chưa cập nhật</span>
+    <div class="max-w-4xl mx-auto p-4 space-y-8 pb-20">
+
+        <!-- Banner Chào mừng (Hiện khi chưa đăng nhập) -->
+        <div id="welcomeBanner" class="bg-gradient-to-r from-sky-600 to-indigo-700 rounded-2xl p-8 text-center shadow-xl hidden">
+            <h1 class="text-2xl font-bold mb-2">Miễn Phí Cloud VPS & Device</h1>
+            <p class="text-sky-100 mb-6 text-sm">Vượt link kiếm xu - Đổi máy tự động - Không cần nạp tiền</p>
+            <button onclick="loginGoogle()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                Bắt đầu ngay
+            </button>
+        </div>
+
+        <!-- Khu vực kiếm tiền (Chỉ hiện khi đã đăng nhập) -->
+        <div id="earnSection" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Box 1: Vượt Link -->
+            <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition">
+                    <i class="fa-solid fa-link text-6xl"></i>
                 </div>
-                
-                <!-- Khu vực hiển thị danh sách -->
-                <div id="statusResult" class="grid grid-cols-1 gap-2 flex-grow content-start min-h-[200px]">
-                    <!-- JS sẽ điền vào đây -->
-                </div>
+                <h3 class="font-bold text-lg text-white mb-1">Vượt Link Ngắn</h3>
+                <p class="text-xs text-slate-400 mb-4">Nhận <span class="text-yellow-400 font-bold">100 Xu</span>/lượt. Tối đa 3 lượt/ngày.</p>
+                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
+                </button>
             </div>
 
-            <!-- Cột Phải: Form Mua -->
-            <div class="lg:col-span-7 bg-slate-800 rounded-lg p-6 shadow-xl border border-slate-700">
-                <div class="mb-4 pb-2 border-b border-slate-700">
-                    <h2 class="text-sm font-bold text-white uppercase"><i class="fa-solid fa-cart-plus mr-2"></i> Mua Máy</h2>
+            <!-- Box 2: Nhập Code -->
+            <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden group">
+                <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition">
+                    <i class="fa-solid fa-barcode text-6xl"></i>
                 </div>
-                
-                <div class="space-y-5">
-                    <!-- Loại Cloud -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Chọn loại máy</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <label class="cursor-pointer">
-                                <input type="radio" name="cloudType" value="UG" class="peer sr-only" checked onchange="handleCloudChange()">
-                                <div class="rounded p-2 text-center border border-slate-600 bg-slate-700 peer-checked:bg-sky-600 peer-checked:text-white hover:bg-slate-600 transition">
-                                    <div class="font-bold text-xs">UGPhone</div>
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="cloudType" value="VS" class="peer sr-only" onchange="handleCloudChange()">
-                                <div class="rounded p-2 text-center border border-slate-600 bg-slate-700 peer-checked:bg-purple-600 peer-checked:text-white hover:bg-slate-600 transition">
-                                    <div class="font-bold text-xs">VsPhone</div>
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="cloudType" value="VM" class="peer sr-only" onchange="handleCloudChange()">
-                                <div class="rounded p-2 text-center border border-slate-600 bg-slate-700 peer-checked:bg-pink-600 peer-checked:text-white hover:bg-slate-600 transition">
-                                    <div class="font-bold text-xs">VMOS</div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Chọn Server -->
-                    <div id="serverContainer">
-                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Khu vực</label>
-                        <select id="serverRegion" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-3 text-sm focus:border-sky-500 outline-none">
-                            <option value="SG">🇸🇬 Singapore</option>
-                            <option value="HK">🇭🇰 Hong Kong</option>
-                            <option value="JP">🇯🇵 Japan</option>
-                            <option value="DE">🇩🇪 Germany</option>
-                            <option value="US">🇺🇸 United States</option>
-                        </select>
-                    </div>
-
-                    <!-- Input Data -->
-                    <div>
-                        <label class="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase">
-                            <span>Dữ liệu đầu vào</span>
-                            <span id="hint" class="text-sky-500 normal-case"></span>
-                        </label>
-                        <textarea id="inputData" rows="3" 
-                            class="w-full bg-slate-900 border border-slate-600 text-white rounded p-3 text-sm font-mono focus:border-sky-500 outline-none"
-                            placeholder=""></textarea>
-                    </div>
-
-                    <button onclick="buyDevice()" id="btnBuy" class="w-full text-white bg-green-600 hover:bg-green-700 font-bold rounded p-3 text-sm shadow-lg active:scale-95 uppercase flex justify-center items-center gap-2">
-                        <span>Xác Nhận Mua</span>
+                <h3 class="font-bold text-lg text-white mb-1">Nhập Mã Code</h3>
+                <p class="text-xs text-slate-400 mb-4">Nhập mã nhận được sau khi vượt link.</p>
+                <div class="flex gap-2">
+                    <input type="text" id="promoCode" placeholder="Nhập mã 6 ký tự..." class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 text-sm text-center uppercase tracking-widest font-mono focus:border-green-500 outline-none">
+                    <button onclick="submitCode()" id="btnSubmitCode" class="bg-green-600 hover:bg-green-500 text-white px-4 rounded-lg text-sm font-bold shadow-lg">
+                        Nhận
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Logs -->
-        <div class="bg-black rounded border border-slate-800 p-2 mt-4">
-            <div id="logs" class="h-20 overflow-y-auto font-mono text-[10px] text-green-500 space-y-1">
-                <div class="opacity-50">> System initialized.</div>
+        <!-- Khu vực Mua Máy (Chỉ hiện khi đã đăng nhập) -->
+        <div id="shopSection" class="hidden bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden">
+            <div class="bg-slate-700/50 p-4 border-b border-slate-700 flex justify-between items-center">
+                <h2 class="font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-server text-sky-500"></i> Cửa Hàng
+                </h2>
+                <span class="text-xs font-bold bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded">Giá: 500 Xu</span>
+            </div>
+            
+            <div class="p-6 space-y-5">
+                <!-- Chọn Loại & Server -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Loại thiết bị</label>
+                        <select id="cloudId" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm focus:border-sky-500 outline-none" onchange="toggleServer()">
+                            <option value="UG">UGPhone (Android Cloud)</option>
+                            <option value="VS">VsPhone</option>
+                            <option value="VM">VMOS Virtual</option>
+                        </select>
+                    </div>
+                    <div id="serverDiv">
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Khu vực</label>
+                        <select id="serverRegion" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm focus:border-sky-500 outline-none">
+                            <option value="SG">🇸🇬 Singapore</option>
+                            <option value="US">🇺🇸 United States</option>
+                            <option value="DE">🇩🇪 Germany</option>
+                            <option value="HK">🇭🇰 Hong Kong</option>
+                            <option value="JP">🇯🇵 Japan</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Input Data -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình <span class="text-sky-500 normal-case italic ml-1">(Local Storage JSON)</span></label>
+                    <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
+                </div>
+
+                <!-- Button Mua -->
+                <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-cart-plus"></i> Mua Ngay (500 Xu)
+                </button>
             </div>
         </div>
 
     </div>
 
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-24 opacity-0 transition-all duration-300 z-50 max-w-sm flex items-start gap-3">
+        <div id="toastIcon" class="mt-1"></div>
+        <div>
+            <div id="toastTitle" class="font-bold text-sm"></div>
+            <div id="toastMsg" class="text-xs text-slate-300 mt-1"></div>
+        </div>
+    </div>
+
     <script>
-        const API_INTERNAL = '/api';
+        // =========================================================
+        // THAY THẾ CONFIG FIREBASE CỦA BẠN VÀO ĐÂY
+        // Lấy tại: Firebase Console -> Project Settings -> General -> Web App
+        // =========================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSy_YOUR_API_KEY_HERE",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123...",
+            appId: "1:123..."
+        };
+        // =========================================================
 
-        // Dữ liệu cứng để hiển thị ngay lập tức
-        const SERVER_LIST_DEF = [
-            { key: "Singapore", name: "Singapore", flag: "🇸🇬", code: "SG" },
-            { key: "Hong Kong", name: "Hong Kong", flag: "🇭🇰", code: "HK" },
-            { key: "Japan",     name: "Japan",     flag: "🇯🇵", code: "JP" },
-            { key: "Germany",   name: "Germany",   flag: "🇩🇪", code: "DE" },
-            { key: "America",   name: "USA",       flag: "🇺🇸", code: "US" }
-        ];
+        // Initialize Firebase Client
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
-        // Biến điều khiển Auto Refresh
-        let autoInterval = null;
-        let countdownInterval = null;
-        let timeLeft = 5;
+        let currentUser = null;
+        let unsubscribeBalance = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. Vẽ khung xương ngay lập tức
-            renderStatus({}, true);
-            // 2. Gọi API lần đầu
-            checkStatus(false);
-            // 3. Setup form
-            handleCloudChange();
+        // --- AUTH SYSTEM ---
+        auth.onAuthStateChanged(user => {
+            const authBtn = document.getElementById('authBtn');
+            const userPanel = document.getElementById('userPanel');
+            const welcomeBanner = document.getElementById('welcomeBanner');
+            const earnSection = document.getElementById('earnSection');
+            const shopSection = document.getElementById('shopSection');
+
+            if (user) {
+                // LOGGED IN
+                currentUser = user;
+                authBtn.classList.add('hidden');
+                welcomeBanner.classList.add('hidden');
+                
+                userPanel.classList.remove('hidden');
+                earnSection.classList.remove('hidden');
+                shopSection.classList.remove('hidden');
+                
+                document.getElementById('userAvatar').src = user.photoURL || 'https://via.placeholder.com/32';
+                
+                // Realtime Balance Listener
+                if(unsubscribeBalance) unsubscribeBalance();
+                unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot(doc => {
+                    const data = doc.data();
+                    const bal = data ? (data.balance || 0) : 0;
+                    // Animation đếm số
+                    animateValue("userBalance", parseInt(document.getElementById('userBalance').innerText), bal, 1000);
+                });
+
+            } else {
+                // LOGGED OUT
+                currentUser = null;
+                if(unsubscribeBalance) unsubscribeBalance();
+                
+                authBtn.classList.remove('hidden');
+                welcomeBanner.classList.remove('hidden');
+                
+                userPanel.classList.add('hidden');
+                earnSection.classList.add('hidden');
+                shopSection.classList.add('hidden');
+            }
         });
 
-        // --- Logic Auto Refresh ---
-        function toggleAutoRefresh() {
-            const isChecked = document.getElementById('autoToggle').checked;
-            const countdownEl = document.getElementById('countdown');
-
-            if (isChecked) {
-                log("Đã bật tự động cập nhật (mỗi 5s).");
-                checkStatus(true); // Check ngay 1 cái
-                
-                // Set interval loop
-                autoInterval = setInterval(() => {
-                    checkStatus(true);
-                    timeLeft = 5;
-                }, 5000);
-
-                // Set countdown UI loop
-                timeLeft = 5;
-                countdownInterval = setInterval(() => {
-                    timeLeft--;
-                    countdownEl.innerText = timeLeft + "s";
-                    if(timeLeft <= 0) timeLeft = 5;
-                }, 1000);
-
-            } else {
-                log("Đã tắt tự động cập nhật.");
-                clearInterval(autoInterval);
-                clearInterval(countdownInterval);
-                countdownEl.innerText = "--";
-            }
+        function loginGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(err => showToast('Lỗi Đăng Nhập', err.message, 'error'));
         }
 
-        // --- Logic API ---
-        async function checkStatus(isBackground = false) {
-            const statusContainer = document.getElementById('statusResult');
-            
-            // Nếu không phải chạy ngầm thì hiện loading mờ
-            if (!isBackground) {
-                statusContainer.classList.add('opacity-50');
-            }
+        // --- CHỨC NĂNG CHÍNH ---
+
+        async function generateLink() {
+            if(!currentUser) return;
+            const btn = document.getElementById('btnGenLink');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
 
             try {
-                const req = await fetch(`${API_INTERNAL}/status`);
-                const json = await req.json();
+                const res = await fetch('/api/gen-link', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        uid: currentUser.uid,
+                        host_url: window.location.origin 
+                    })
+                });
+                const data = await res.json();
                 
-                document.getElementById('lastUpdate').textContent = "Cập nhật: " + new Date().toLocaleTimeString();
-
-                if (json.server_data) {
-                    renderStatus(json.server_data);
-                    updateSelectDropdown(json.server_data);
-                    
-                    if (!isBackground) log("✅ Đã cập nhật trạng thái.");
+                if(data.success) {
+                    window.open(data.shortenedUrl, '_blank');
+                    showToast('Thành Công', 'Đã mở tab mới. Hãy vượt link để lấy mã!', 'success');
                 } else {
-                    // API trả về nhưng không có data -> Lỗi Token hoặc API đổi
-                    renderStatus({}); 
-                    log("⚠️ API trả về rỗng. Kiểm tra Token trong Vercel.", true);
+                    showToast('Thất Bại', data.error, 'error');
                 }
-
-            } catch (e) {
-                renderStatus({}); 
-                log("❌ Lỗi kết nối mạng hoặc API Backend chết.", true);
-            } finally {
-                statusContainer.classList.remove('opacity-50');
+            } catch(e) { showToast('Lỗi Mạng', 'Không thể kết nối server', 'error'); }
+            finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
             }
         }
 
-        function renderStatus(apiData, isFirstLoad = false) {
-            const container = document.getElementById('statusResult');
-            container.innerHTML = '';
+        async function submitCode() {
+            if(!currentUser) return;
+            const input = document.getElementById('promoCode');
+            const code = input.value.trim();
+            if(!code) return showToast('Lỗi', 'Chưa nhập mã code', 'warning');
 
-            SERVER_LIST_DEF.forEach(server => {
-                const isOnline = apiData[server.key] === true;
-                // Nếu apiData rỗng (lỗi) hoặc key không tồn tại -> Unknown
-                const isUnknown = apiData[server.key] === undefined;
+            const btn = document.getElementById('btnSubmitCode');
+            btn.disabled = true;
+            btn.innerHTML = '...';
 
-                let colorClass, statusBadge;
-
-                if (isFirstLoad || isUnknown) {
-                    // Trạng thái chưa rõ (Màu xám)
-                    colorClass = 'border-slate-700 bg-slate-800 text-slate-500';
-                    statusBadge = '<span class="text-[10px] bg-slate-700 text-slate-400 px-2 py-1 rounded">CHECKING</span>';
-                } else if (isOnline) {
-                    // Có hàng (Màu xanh sáng)
-                    colorClass = 'border-green-500 bg-green-900/20 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)] transform scale-[1.02]';
-                    statusBadge = '<span class="text-[10px] bg-green-600 text-white px-2 py-1 rounded font-bold animate-pulse">CÒN MÁY</span>';
+            try {
+                const res = await fetch('/api/claim', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ uid: currentUser.uid, code: code })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    showToast('Nhận Thưởng', data.message, 'success');
+                    input.value = '';
                 } else {
-                    // Hết hàng (Màu đỏ tối)
-                    colorClass = 'border-red-900/50 bg-red-900/10 text-red-500 opacity-60';
-                    statusBadge = '<span class="text-[10px] bg-red-900/50 text-red-400 px-2 py-1 rounded">HẾT MÁY</span>';
+                    showToast('Lỗi Mã', data.error, 'error');
                 }
-
-                const item = document.createElement('div');
-                item.className = `flex justify-between items-center p-3 rounded border transition-all duration-300 ${colorClass}`;
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="text-xl">${server.flag}</span>
-                        <span class="font-medium text-sm">${server.name}</span>
-                    </div> 
-                    <div>${statusBadge}</div>`;
-                container.appendChild(item);
-            });
-        }
-
-        function updateSelectDropdown(apiData) {
-            const select = document.getElementById('serverRegion');
-            const current = select.value;
-            select.innerHTML = ''; 
-
-            SERVER_LIST_DEF.forEach(server => {
-                const isOnline = apiData[server.key] === true;
-                let text = `${server.flag} ${server.name}`;
-                if (apiData[server.key] !== undefined) {
-                    text += isOnline ? " (✅ Có máy)" : " (❌ Hết)";
-                }
-                const opt = document.createElement('option');
-                opt.value = server.code;
-                opt.textContent = text;
-                select.appendChild(opt);
-            });
-            select.value = current;
-        }
-
-        function handleCloudChange() {
-            const cloudId = document.querySelector('input[name="cloudType"]:checked').value;
-            const sv = document.getElementById('serverContainer');
-            const hint = document.getElementById('hint');
-            const inp = document.getElementById('inputData');
-
-            if (cloudId === 'UG') {
-                sv.classList.remove('hidden');
-                inp.placeholder = '{"token": "..."}';
-                hint.textContent = "(Local Storage JSON)";
-            } else {
-                sv.classList.add('hidden');
-                inp.placeholder = "User|Pass";
-                hint.textContent = "(Tài khoản|Mật khẩu)";
+            } catch(e) { showToast('Lỗi Mạng', 'Lỗi hệ thống', 'error'); }
+            finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Nhận';
             }
-        }
-
-        function log(msg, isError = false) {
-            const logs = document.getElementById('logs');
-            const div = document.createElement('div');
-            const time = new Date().toLocaleTimeString('vi-VN', {hour12: false});
-            div.className = isError ? 'text-red-400 font-bold' : 'text-green-500';
-            div.innerHTML = `<span class="text-slate-600 mr-2">[${time}]</span>${msg}`;
-            logs.prepend(div);
         }
 
         async function buyDevice() {
-            const btn = document.getElementById('btnBuy');
-            const cloudId = document.querySelector('input[name="cloudType"]:checked').value;
-            const inputData = document.getElementById('inputData').value;
-            const serverCode = document.getElementById('serverRegion').value;
-            
-            if(!inputData.trim()) return alert("Thiếu dữ liệu đầu vào!");
+            if(!currentUser) return;
+            const inputData = document.getElementById('inputData').value.trim();
+            if(!inputData) return showToast('Thiếu Thông Tin', 'Vui lòng nhập dữ liệu cấu hình', 'warning');
 
+            // Kiểm tra số dư UI trước (Backend sẽ check lại)
+            const currentBal = parseInt(document.getElementById('userBalance').innerText);
+            if(currentBal < 500) return showToast('Không Đủ Xu', 'Bạn cần 500 Xu. Hãy vượt link kiếm thêm!', 'error');
+
+            if(!confirm("Xác nhận mua máy với giá 500 Xu?")) return;
+
+            const btn = document.getElementById('btnBuy');
+            const originalHTML = btn.innerHTML;
             btn.disabled = true;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Xử lý...';
-            
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang xử lý...';
+
             try {
-                const req = await fetch(`${API_INTERNAL}/buy`, {
+                const res = await fetch('/api/buy', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        cloud_id: cloudId,
-                        server: serverCode,
+                        uid: currentUser.uid,
+                        cloud_id: document.getElementById('cloudId').value,
+                        server: document.getElementById('serverRegion').value,
                         input_data: inputData
                     })
                 });
-                const json = await req.json();
+                const data = await res.json();
 
-                if(json.success) {
-                    log(`✅ Mua thành công: ${json.message}`);
-                    alert(json.message);
+                if(data.success) {
+                    showToast('Thành Công', data.message, 'success');
                 } else {
-                    log(`🛑 Lỗi mua: ${json.message}`, true);
-                    alert(json.message);
+                    showToast('Giao Dịch Thất Bại', data.message, 'error');
                 }
-            } catch (e) {
-                log("❌ Lỗi hệ thống.", true);
-            } finally {
+            } catch(e) { showToast('Lỗi', 'Không thể kết nối Server', 'error'); }
+            finally {
                 btn.disabled = false;
-                btn.innerHTML = originalText;
+                btn.innerHTML = originalHTML;
             }
+        }
+
+        function toggleServer() {
+            const val = document.getElementById('cloudId').value;
+            const svDiv = document.getElementById('serverDiv');
+            if (val === 'UG') svDiv.classList.remove('hidden');
+            else svDiv.classList.add('hidden');
+        }
+
+        // --- UTILS ---
+        function showToast(title, msg, type) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            
+            document.getElementById('toastTitle').innerText = title;
+            document.getElementById('toastMsg').innerText = msg;
+
+            toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-4 rounded-xl shadow-2xl border-l-4 translate-y-0 opacity-100 transition-all duration-300 z-50 max-w-sm flex items-start gap-3`;
+            
+            if(type === 'success') {
+                toast.classList.add('border-green-500');
+                icon.innerHTML = '<i class="fa-solid fa-check-circle text-green-500 text-xl"></i>';
+            } else if(type === 'error') {
+                toast.classList.add('border-red-500');
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>';
+            } else {
+                toast.classList.add('border-yellow-500');
+                icon.innerHTML = '<i class="fa-solid fa-circle-info text-yellow-500 text-xl"></i>';
+            }
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 4000);
+        }
+
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            const range = end - start;
+            let current = start;
+            const increment = end > start ? 1 : -1;
+            const stepTime = Math.abs(Math.floor(duration / range));
+            const obj = document.getElementById(id);
+            const timer = setInterval(function() {
+                current += increment;
+                obj.innerHTML = current;
+                if (current == end) {
+                    clearInterval(timer);
+                }
+            }, stepTime > 0 ? stepTime : 10);
         }
     </script>
 </body>
