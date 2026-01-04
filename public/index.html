@@ -6,18 +6,11 @@
     <title>Cloud VPS Shop</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
     <style>
-        @keyframes coin-pop { 
-            0% { transform: scale(1); color: #FACC15; } 
-            50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } 
-            100% { transform: scale(1); color: #FACC15; } 
-        }
+        @keyframes coin-pop { 0% { transform: scale(1); color: #FACC15; } 50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } 100% { transform: scale(1); color: #FACC15; } }
         .money-update { animation: coin-pop 0.5s ease-in-out; }
     </style>
 </head>
@@ -155,7 +148,7 @@
             });
         });
 
-        // --- MUA MÁY QUA SCRAPERAPI (FIX HTTPS & CORS) ---
+        // --- MUA MÁY (ĐƠN GIẢN HÓA) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -168,88 +161,39 @@
             
             const btn = document.getElementById('btnBuy');
             btn.disabled = true; 
-            
-            let transId = null;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
 
             try {
-                // 1. TRỪ TIỀN
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Thanh toán...';
-                const prepRes = await fetch('/api/prepare-buy', {
+                // Chỉ gọi 1 lệnh duy nhất lên Server, để Server tự dùng ScraperAPI
+                const res = await fetch('/api/buy', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ uid: currentUser.uid })
-                });
-                const prepData = await prepRes.json();
-                if(!prepData.success) throw new Error(prepData.message || "Lỗi trừ tiền");
-
-                const token = prepData.temp_token;
-                transId = prepData.trans_id;
-
-                // 2. GỌI SCRAPERAPI
-                btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Đang khởi tạo...';
-                
-                // --- CẤU HÌNH SCRAPERAPI ---
-                const SCRAPER_KEY = '5a704f2a085016e5a6ffa9f6a3cbcd97'; 
-                const targetUrl = 'https://hoang.cloud/dev/buy_device_cloud';
-                
-                // LƯU Ý: Phải dùng HTTPS để tránh lỗi Mixed Content
-                // keep_headers=true: Giữ nguyên Headers (quan trọng cho JSON)
-                // render=true: Giúp vượt Cloudflare Under Attack Mode (quan trọng nhất)
-                const proxyUrl = `https://api.scraperapi.com/?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(targetUrl)}&keep_headers=true&render=true`;
-
-                const payload = { 
-                    user_token: token, 
-                    cloud_id: document.getElementById('cloudId').value, 
-                    server: document.getElementById('serverRegion').value, 
-                    input_data: inputData 
-                };
-
-                const realRes = await fetch(proxyUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        uid: currentUser.uid,
+                        cloud_id: document.getElementById('cloudId').value,
+                        server: document.getElementById('serverRegion').value,
+                        input_data: inputData
+                    })
                 });
                 
-                // Kiểm tra lỗi từ Proxy trước khi Parse JSON
-                if (!realRes.ok) {
-                    const txt = await realRes.text();
-                    throw new Error(`Scraper Error ${realRes.status}: ${txt}`);
-                }
+                const data = await res.json();
 
-                const realData = await realRes.json();
-
-                if (realData.success) {
-                    showToast('Thành Công', realData.message, 'success');
+                if(data.success) {
+                    showToast('Thành Công', data.message, 'success');
                 } else {
-                    throw new Error(realData.message || "Lỗi từ nhà cung cấp");
+                    alert(`❌ MUA THẤT BẠI!\n\nLý do: ${data.message}`);
                 }
 
             } catch (err) {
                 console.error("Lỗi Mua Hàng:", err);
-                
-                // HOÀN TIỀN
-                if (transId) {
-                    btn.innerHTML = 'Đang hoàn tiền...';
-                    try {
-                        await fetch('/api/refund', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: err.message })
-                        });
-                        alert(`❌ MUA THẤT BẠI!\n\nLý do: ${err.message}\n\n✅ Đã hoàn lại 50 Xu.`);
-                    } catch (refundErr) {
-                        alert(`❌ LỖI KÉP! Mua lỗi & Hoàn tiền lỗi. Báo Admin.`);
-                    }
-                } else {
-                    showToast('Lỗi', err.message, 'error');
-                }
+                alert(`❌ LỖI KẾT NỐI SERVER!\n\nLý do: ${err.message}`);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)';
             }
         }
 
-        // ... Helpers (openGuide, loginGoogle, etc.) ...
+        // ... Helpers ...
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
         function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
