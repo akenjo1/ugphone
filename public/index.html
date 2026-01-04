@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDK Compat -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -21,7 +21,7 @@
         .money-update { animation: coin-pop 0.5s ease-in-out; }
     </style>
 
-    <!-- Script bắt lỗi toàn cục (Tránh đen web) -->
+    <!-- Script bắt lỗi toàn cục -->
     <script>
         window.onerror = function(message, source, lineno, colno, error) {
             const box = document.getElementById('criticalError');
@@ -29,17 +29,16 @@
                 box.classList.remove('hidden');
                 document.getElementById('criticalErrorMsg').innerText = `${message} (Line: ${lineno})`;
             }
-            console.error("Critical Error:", message);
         };
     </script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-    <!-- HỘP THOẠI BÁO LỖI CHẾT TRANG -->
+    <!-- BÁO LỖI CHẾT TRANG -->
     <div id="criticalError" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4">
         <div class="bg-red-900 border-2 border-red-500 p-6 rounded-xl max-w-lg text-center">
             <h1 class="text-2xl font-bold text-white mb-2">⚠️ WEB GẶP SỰ CỐ</h1>
-            <p class="text-red-200 mb-4">Có lỗi cú pháp khiến web không chạy được:</p>
+            <p class="text-red-200 mb-4">Lỗi cú pháp Javascript:</p>
             <code id="criticalErrorMsg" class="block bg-black/50 p-3 rounded text-left font-mono text-sm text-red-400 mb-4">...</code>
             <button onclick="window.location.reload()" class="bg-white text-red-900 px-6 py-2 rounded font-bold">Tải Lại Trang</button>
         </div>
@@ -187,7 +186,7 @@
             });
         });
 
-        // --- MUA MÁY QUA REPLIT (CẤU HÌNH CHÍNH XÁC) ---
+        // --- MUA MÁY QUA REPLIT (PHƯƠNG ÁN CUỐI CÙNG & MẠNH NHẤT) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -216,12 +215,12 @@
 
                 transId = prepData.trans_id;
 
-                // 2. GỌI REPLIT PROXY
+                // 2. GỌI REPLIT PROXY (LINK CỦA BẠN ĐÃ ĐƯỢC THÊM)
                 btn.innerHTML = '<i class="fa-solid fa-server"></i> Khởi tạo (Replit)...';
                 
-                // >>>> URL REPLIT ĐÃ ĐƯỢC CẬP NHẬT <<<<
+                // --- ĐÂY LÀ LINK REPLIT CỦA BẠN (Đã thêm /buy ở cuối) ---
                 const REPLIT_URL = "https://d47398ae-f00a-4066-b37b-84b42c43581f-00-118dmgzyukozq.pike.replit.dev/buy"; 
-                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                // --------------------------------------------------------
 
                 const payload = { 
                     cloud_id: document.getElementById('cloudId').value, 
@@ -235,15 +234,7 @@
                     body: JSON.stringify(payload)
                 });
                 
-                const textData = await realRes.text();
-                let realData;
-                
-                try {
-                    realData = JSON.parse(textData);
-                } catch(e) {
-                    console.error("Replit Raw:", textData);
-                    throw new Error(`Replit trả về lỗi: ${textData.substring(0, 100)}...`);
-                }
+                const realData = await realRes.json();
 
                 if (realData.success) {
                     showToast('Thành Công', realData.message, 'success');
@@ -276,7 +267,7 @@
             }
         }
 
-        // ... Helpers (openGuide, loginGoogle, etc.) ...
+        // ... Helpers (Giữ nguyên) ...
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
         function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
