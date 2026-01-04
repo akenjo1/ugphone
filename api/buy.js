@@ -3,17 +3,15 @@ const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 
 export default async function handler(req, res) {
-    // 1. CHỈ CHO PHÉP POST
     if (req.method !== 'POST') return res.status(405).json({error: 'Method Not Allowed'});
 
     const { uid, cloud_id, server, input_data } = req.body;
     const MACHINE_PRICE = 50; 
     
     const HOANG_TOKEN = process.env.HOANG_CLOUD_TOKEN;
-
-    // --- CẤU HÌNH PROXY CỦA BẠN (ĐÃ THÊM) ---
+    
+    // Proxy bạn cung cấp
     const PROXY_STRING = "http://cbqcn_akenj:XpMQ3py0@117.0.198.94:15924";
-    // ----------------------------------------
 
     if (!HOANG_TOKEN) return res.status(500).json({ success: false, message: "Lỗi: Thiếu Token HoangCloud." });
     if (!uid) return res.status(401).json({ error: "Chưa đăng nhập" });
@@ -21,7 +19,7 @@ export default async function handler(req, res) {
     const userRef = db.collection('users').doc(uid);
 
     try {
-        // 2. TRỪ TIỀN TRƯỚC
+        // 1. TRỪ TIỀN TRƯỚC
         await db.runTransaction(async (t) => {
             const doc = await t.get(userRef);
             const balance = doc.data()?.balance || 0;
@@ -31,24 +29,24 @@ export default async function handler(req, res) {
             t.update(userRef, { balance: balance - MACHINE_PRICE });
         });
 
-        // 3. CẤU HÌNH GỌI API QUA PROXY
+        // 2. CẤU HÌNH GỌI API QUA PROXY
         console.log("Đang kết nối qua Proxy: 117.0.198.94...");
         
+        // Thêm cấu hình bỏ qua lỗi SSL (quan trọng với Proxy dân cư)
         const httpsAgent = new HttpsProxyAgent(PROXY_STRING);
-
+        
         const axiosConfig = {
             headers: {
                 'Host': 'hoang.cloud',
-                // Giả lập Chrome Windows mới nhất để uy tín
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'Origin': 'https://hoang.cloud',
                 'Referer': 'https://hoang.cloud/'
             },
-            httpsAgent: httpsAgent, // Kích hoạt Proxy
-            proxy: false, // Tắt proxy mặc định của axios
-            timeout: 60000 // Chờ tối đa 60s
+            httpsAgent: httpsAgent,
+            proxy: false, 
+            timeout: 9000 // Giới hạn 9s để kịp trả lỗi về cho Client trước khi Vercel cắt (Vercel limit 10s)
         };
 
         let apiSuccess = false;
@@ -65,30 +63,30 @@ export default async function handler(req, res) {
             const result = response.data;
             console.log("Kết quả từ HoangCloud:", result);
 
-            // Kiểm tra kỹ xem có bị trả về HTML (lỗi Cloudflare) không
             if (typeof result === 'string' && result.includes('<!DOCTYPE html>')) {
-                throw new Error("Proxy vẫn bị Cloudflare chặn (HTML Response).");
+                throw new Error("Proxy bị Cloudflare chặn (HTML Response).");
             }
 
             if (result.success) {
                 apiSuccess = true;
                 apiMessage = result.message;
             } else {
-                apiMessage = result.message || "Lỗi từ nhà cung cấp (Success=False)";
+                apiMessage = result.message || "Lỗi từ nhà cung cấp (API Success=False)";
             }
 
         } catch (err) {
             console.error("Lỗi gọi API:", err.message);
-            apiMessage = `Lỗi kết nối: ${err.message}`;
             
-            if (err.response) {
-                if (err.response.status === 403) apiMessage = "Cloudflare chặn IP Proxy này (403).";
-                if (err.response.status === 407) apiMessage = "Sai mật khẩu Proxy.";
-                if (err.response.status === 502) apiMessage = "Proxy không phản hồi (Bad Gateway).";
-            }
+            // Phân tích lỗi để báo cho người dùng
+            if (err.code === 'ECONNREFUSED') apiMessage = "Proxy chết hoặc từ chối kết nối.";
+            else if (err.code === 'ETIMEDOUT') apiMessage = "Proxy quá chậm (Timeout > 9s).";
+            else if (err.code === 'ECONNRESET') apiMessage = "Proxy ngắt kết nối đột ngột.";
+            else if (err.response && err.response.status === 403) apiMessage = "Cloudflare chặn IP Proxy này.";
+            else if (err.response && err.response.status === 407) apiMessage = "Sai mật khẩu Proxy.";
+            else apiMessage = `Lỗi Proxy: ${err.message}`;
         }
 
-        // 4. XỬ LÝ KẾT QUẢ
+        // 3. XỬ LÝ KẾT QUẢ
         if (apiSuccess) {
             return res.status(200).json({ success: true, message: "Mua thành công! " + apiMessage });
         } else {
