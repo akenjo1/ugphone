@@ -145,7 +145,7 @@
             });
         });
 
-        // --- MUA MÁY (Debug Mode) ---
+        // --- MUA MÁY QUA PROXY ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -176,20 +176,30 @@
                 const token = prepData.temp_token;
                 transId = prepData.trans_id;
 
-                // BƯỚC 2: GỌI CLIENT (Có try-catch bắt lỗi chi tiết)
-                btn.innerHTML = '<i class="fa-solid fa-server"></i> Khởi tạo...';
+                // BƯỚC 2: GỌI CLIENT QUA CORS PROXY
+                // Sử dụng corsproxy.io để vượt lỗi CORS
+                btn.innerHTML = '<i class="fa-solid fa-server"></i> Khởi tạo (Proxy)...';
                 
                 const cloudId = document.getElementById('cloudId').value;
                 const server = document.getElementById('serverRegion').value;
-                
                 const payload = { user_token: token, cloud_id: cloudId, server: server, input_data: inputData };
 
-                const realRes = await fetch('https://hoang.cloud/dev/buy_device_cloud', {
+                // Target URL
+                const targetUrl = 'https://hoang.cloud/dev/buy_device_cloud';
+                // Proxy URL: Ghép proxy + target
+                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
+
+                const realRes = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 
+                // Proxy có thể trả về lỗi của chính nó
+                if (!realRes.ok) {
+                    throw new Error(`Proxy Error: ${realRes.status} ${realRes.statusText}`);
+                }
+
                 const realData = await realRes.json();
 
                 if (realData.success) {
@@ -199,12 +209,12 @@
                 }
 
             } catch (err) {
-                console.error("Lỗi Mua Hàng Chi Tiết:", err);
+                console.error("Lỗi Mua Hàng:", err);
                 
-                // PHÂN TÍCH LỖI ĐỂ HIỆN THÔNG BÁO RÕ RÀNG
+                // PHÂN TÍCH LỖI
                 let friendlyError = err.message;
                 if (err.message === 'Failed to fetch') {
-                    friendlyError = "Lỗi CORS/Mạng: Trình duyệt chặn kết nối đến hoang.cloud. Hãy kiểm tra F12 Console.";
+                    friendlyError = "Lỗi Mạng: Không thể kết nối đến Proxy hoặc bị chặn.";
                 }
 
                 // NẾU CÓ TRANSID THÌ GỌI HOÀN TIỀN
@@ -216,12 +226,9 @@
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: friendlyError })
                         });
-                        
-                        // HIỆN HỘP THOẠI BÁO LỖI LỚN
-                        alert(`❌ MUA THẤT BẠI!\n\nLý do: ${friendlyError}\n\n✅ Đã hoàn lại 50 Xu vào tài khoản.`);
-                        
+                        alert(`❌ MUA THẤT BẠI!\n\nLý do: ${friendlyError}\n\n✅ Đã hoàn lại 50 Xu.`);
                     } catch (refundErr) {
-                        alert(`❌ LỖI KÉP!\n\nMua thất bại (${friendlyError}) VÀ Hoàn tiền thất bại (Lỗi mạng).\nHãy báo Admin kiểm tra TransID: ${transId}`);
+                        alert(`❌ LỖI KÉP! Mua lỗi & Hoàn tiền lỗi. Báo Admin ngay.`);
                     }
                 } else {
                     showToast('Lỗi', friendlyError, 'error');
