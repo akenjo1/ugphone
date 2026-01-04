@@ -75,14 +75,9 @@
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-link text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Vượt Link Ngắn</h3>
                 <p class="text-xs text-slate-400 mb-4">Nhận <span class="text-yellow-400 font-bold">100 Xu</span>/lượt. Tối đa 3 lượt/ngày.</p>
-                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg">
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
-                </button>
-                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2">
-                    <i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn
-                </button>
+                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg"><i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt</button>
+                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2"><i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn</button>
             </div>
-
             <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden">
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-barcode text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Nhập Mã Code</h3>
@@ -125,6 +120,7 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
+                
                 <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
                     <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
                 </button>
@@ -162,7 +158,7 @@
             });
         });
 
-        // --- HÀM MUA MÁY (CHẾ ĐỘ GIẢ LẬP) ---
+        // --- MUA MÁY QUA BACKEND (ĐÃ CÓ PROXY XỊN) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -175,41 +171,40 @@
             
             const btn = document.getElementById('btnBuy');
             btn.disabled = true; 
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang thanh toán...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
 
             try {
-                // 1. GỌI API TRỪ TIỀN THẬT
-                const res = await fetch('/api/prepare-buy', {
+                // Gọi API Backend (Nơi đã cài đặt Proxy IPv4)
+                const res = await fetch('/api/buy', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ uid: currentUser.uid })
+                    body: JSON.stringify({
+                        uid: currentUser.uid,
+                        cloud_id: document.getElementById('cloudId').value,
+                        server: document.getElementById('serverRegion').value,
+                        input_data: inputData
+                    })
                 });
                 
                 const data = await res.json();
 
                 if(data.success) {
-                    // Trừ tiền thành công
-                    btn.innerHTML = '<i class="fa-solid fa-server"></i> Đang khởi tạo...';
-                    
-                    // Giả vờ chờ 2 giây như đang gọi Server thật
-                    await new Promise(r => setTimeout(r, 2000));
-
-                    // Thông báo thành công giả lập
-                    showToast('Thành Công', 'Mua máy thành công! Vui lòng kiểm tra email hoặc lịch sử.', 'success');
+                    showToast('Thành Công', data.message, 'success');
                 } else {
-                    showToast('Thất bại', data.message, 'error');
+                    // Nếu lỗi do proxy hoặc hết hàng, backend sẽ tự hoàn tiền và báo ở đây
+                    alert(`❌ THẤT BẠI!\n\n${data.message}`);
                 }
 
             } catch (err) {
                 console.error(err);
-                showToast('Lỗi', 'Lỗi kết nối', 'error');
+                showToast('Lỗi', 'Lỗi kết nối Server', 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)';
             }
         }
 
-        // ... Helpers (Giữ nguyên) ...
+        // ... Helpers (openGuide, loginGoogle, generateLink...) ...
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
         function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
