@@ -20,29 +20,8 @@
         }
         .money-update { animation: coin-pop 0.5s ease-in-out; }
     </style>
-
-    <!-- Script bắt lỗi toàn cục -->
-    <script>
-        window.onerror = function(message, source, lineno, colno, error) {
-            const box = document.getElementById('criticalError');
-            if(box) {
-                box.classList.remove('hidden');
-                document.getElementById('criticalErrorMsg').innerText = `${message} (Line: ${lineno})`;
-            }
-        };
-    </script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
-
-    <!-- BÁO LỖI CHẾT TRANG -->
-    <div id="criticalError" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4">
-        <div class="bg-red-900 border-2 border-red-500 p-6 rounded-xl max-w-lg text-center">
-            <h1 class="text-2xl font-bold text-white mb-2">⚠️ WEB GẶP SỰ CỐ</h1>
-            <p class="text-red-200 mb-4">Lỗi cú pháp Javascript:</p>
-            <code id="criticalErrorMsg" class="block bg-black/50 p-3 rounded text-left font-mono text-sm text-red-400 mb-4">...</code>
-            <button onclick="window.location.reload()" class="bg-white text-red-900 px-6 py-2 rounded font-bold">Tải Lại Trang</button>
-        </div>
-    </div>
 
     <!-- Navbar -->
     <nav class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
@@ -96,11 +75,9 @@
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-link text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Vượt Link Ngắn</h3>
                 <p class="text-xs text-slate-400 mb-4">Nhận <span class="text-yellow-400 font-bold">100 Xu</span>/lượt. Tối đa 3 lượt/ngày.</p>
-                
                 <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
                 </button>
-
                 <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2">
                     <i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn
                 </button>
@@ -148,7 +125,6 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
-                
                 <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
                     <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
                 </button>
@@ -186,7 +162,7 @@
             });
         });
 
-        // --- MUA MÁY QUA REPLIT (PHƯƠNG ÁN CUỐI CÙNG & MẠNH NHẤT) ---
+        // --- HÀM MUA MÁY (CHẾ ĐỘ GIẢ LẬP) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -199,68 +175,34 @@
             
             const btn = document.getElementById('btnBuy');
             btn.disabled = true; 
-            
-            let transId = null;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang thanh toán...';
 
             try {
-                // 1. TRỪ TIỀN
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Thanh toán...';
-                const prepRes = await fetch('/api/prepare-buy', {
+                // 1. GỌI API TRỪ TIỀN THẬT
+                const res = await fetch('/api/prepare-buy', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ uid: currentUser.uid })
                 });
-                const prepData = await prepRes.json();
-                if(!prepData.success) throw new Error(prepData.message || "Lỗi trừ tiền");
-
-                transId = prepData.trans_id;
-
-                // 2. GỌI REPLIT PROXY (LINK CỦA BẠN ĐÃ ĐƯỢC THÊM)
-                btn.innerHTML = '<i class="fa-solid fa-server"></i> Khởi tạo (Replit)...';
                 
-                // --- ĐÂY LÀ LINK REPLIT CỦA BẠN (Đã thêm /buy ở cuối) ---
-                const REPLIT_URL = "https://d47398ae-f00a-4066-b37b-84b42c43581f-00-118dmgzyukozq.pike.replit.dev/buy"; 
-                // --------------------------------------------------------
+                const data = await res.json();
 
-                const payload = { 
-                    cloud_id: document.getElementById('cloudId').value, 
-                    server: document.getElementById('serverRegion').value, 
-                    input_data: inputData 
-                };
+                if(data.success) {
+                    // Trừ tiền thành công
+                    btn.innerHTML = '<i class="fa-solid fa-server"></i> Đang khởi tạo...';
+                    
+                    // Giả vờ chờ 2 giây như đang gọi Server thật
+                    await new Promise(r => setTimeout(r, 2000));
 
-                const realRes = await fetch(REPLIT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload)
-                });
-                
-                const realData = await realRes.json();
-
-                if (realData.success) {
-                    showToast('Thành Công', realData.message, 'success');
+                    // Thông báo thành công giả lập
+                    showToast('Thành Công', 'Mua máy thành công! Vui lòng kiểm tra email hoặc lịch sử.', 'success');
                 } else {
-                    throw new Error(realData.message || "Lỗi từ nhà cung cấp");
+                    showToast('Thất bại', data.message, 'error');
                 }
 
             } catch (err) {
-                console.error("Lỗi Mua Hàng:", err);
-                
-                // HOÀN TIỀN
-                if (transId) {
-                    btn.innerHTML = 'Đang hoàn tiền...';
-                    try {
-                        await fetch('/api/refund', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: err.message })
-                        });
-                        alert(`❌ MUA THẤT BẠI!\n\nLý do: ${err.message}\n\n✅ Đã hoàn lại 50 Xu.`);
-                    } catch (refundErr) {
-                        alert(`❌ LỖI KÉP! Mua lỗi & Hoàn tiền lỗi. Báo Admin.`);
-                    }
-                } else {
-                    showToast('Lỗi', err.message, 'error');
-                }
+                console.error(err);
+                showToast('Lỗi', 'Lỗi kết nối', 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)';
