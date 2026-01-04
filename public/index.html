@@ -158,19 +158,7 @@
     </div>
 
     <!-- MODAL & Toast -->
-    <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)">
-        <div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()">
-            <button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link</h3>
-            <div class="space-y-4 text-sm text-slate-300">
-                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div><div><p class="font-bold text-white">Bấm "Lấy Link Vượt"</p><p class="text-xs mt-1">Hệ thống mở tab mới đến trang rút gọn.</p></div></div>
-                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div><div><p class="font-bold text-white">Xác thực & Chờ đợi</p><p class="text-xs mt-1">Tích vào "I'm not a robot" và chờ đếm ngược.</p></div></div>
-                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div><div><p class="font-bold text-white">Lấy Mã & Nhập Thưởng</p><p class="text-xs mt-1">Copy mã 6 số, quay lại đây nhập để nhận 100 Xu.</p></div></div>
-            </div>
-            <div class="mt-6 text-center"><button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button></div>
-        </div>
-    </div>
-
+    <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)"><div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()"><button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button><h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link</h3><div class="space-y-4 text-sm text-slate-300"><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div><div><p class="font-bold text-white">Bấm "Lấy Link Vượt"</p><p class="text-xs mt-1">Hệ thống mở tab mới đến trang rút gọn.</p></div></div><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div><div><p class="font-bold text-white">Xác thực & Chờ đợi</p><p class="text-xs mt-1">Tích vào "I'm not a robot" và chờ đếm ngược.</p></div></div><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div><div><p class="font-bold text-white">Lấy Mã & Nhập Thưởng</p><p class="text-xs mt-1">Copy mã 6 số, quay lại đây nhập để nhận 100 Xu.</p></div></div></div><div class="mt-6 text-center"><button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button></div></div></div>
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-32 opacity-0 transition-all duration-500 z-50 max-w-sm flex items-start gap-3"><div id="toastIcon" class="mt-1"></div><div><div id="toastTitle" class="font-bold text-sm"></div><div id="toastMsg" class="text-xs text-slate-300 mt-1"></div></div></div>
 
     <script>
@@ -199,7 +187,7 @@
             });
         });
 
-        // --- MUA MÁY QUA REPLIT PROXY (KHẮC TINH CLOUDFLARE) ---
+        // --- MUA MÁY QUA REPLIT (CẤU HÌNH CHÍNH XÁC) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -231,15 +219,10 @@
                 // 2. GỌI REPLIT PROXY
                 btn.innerHTML = '<i class="fa-solid fa-server"></i> Khởi tạo (Replit)...';
                 
-                // >>>> DÁN LINK REPLIT CỦA BẠN VÀO ĐÂY (NHỚ CÓ /buy Ở CUỐI) <<<<
-                const REPLIT_URL = "DÁN_LINK_REPLIT_VÀO_ĐÂY"; 
-                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                // >>>> URL REPLIT ĐÃ ĐƯỢC CẬP NHẬT <<<<
+                const REPLIT_URL = "https://d47398ae-f00a-4066-b37b-84b42c43581f-00-118dmgzyukozq.pike.replit.dev/buy"; 
+                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-                if(REPLIT_URL.includes("DÁN_LINK")) {
-                    throw new Error("Admin chưa dán Link Replit vào code!");
-                }
-
-                // Payload chỉ chứa thông tin cần thiết, Token đã nằm trên Replit
                 const payload = { 
                     cloud_id: document.getElementById('cloudId').value, 
                     server: document.getElementById('serverRegion').value, 
@@ -252,7 +235,15 @@
                     body: JSON.stringify(payload)
                 });
                 
-                const realData = await realRes.json();
+                const textData = await realRes.text();
+                let realData;
+                
+                try {
+                    realData = JSON.parse(textData);
+                } catch(e) {
+                    console.error("Replit Raw:", textData);
+                    throw new Error(`Replit trả về lỗi: ${textData.substring(0, 100)}...`);
+                }
 
                 if (realData.success) {
                     showToast('Thành Công', realData.message, 'success');
@@ -285,7 +276,7 @@
             }
         }
 
-        // ... Helpers ...
+        // ... Helpers (openGuide, loginGoogle, etc.) ...
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
         function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
