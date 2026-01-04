@@ -1,5 +1,6 @@
 const { db, admin } = require('./lib/firebaseAdmin');
-const axios = require('axios'); // Dùng axios thay vì fetch
+// Dùng Dynamic Import cho node-fetch
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({error: 'Method Not Allowed'});
@@ -7,11 +8,12 @@ export default async function handler(req, res) {
     const { uid, cloud_id, server, input_data } = req.body;
     const MACHINE_PRICE = 50; 
     
+    // --- CẤU HÌNH ---
     const HOANG_TOKEN = process.env.HOANG_CLOUD_TOKEN;
-    if (!HOANG_TOKEN) {
-        return res.status(500).json({ success: false, message: "Lỗi cấu hình: Thiếu Token." });
-    }
+    // Key ScraperAPI của bạn (Nên đưa vào biến môi trường SCRAPER_API_KEY thì tốt hơn)
+    const SCRAPER_KEY = process.env.SCRAPER_API_KEY || "5a704f2a085016e5a6ffa9f6a3cbcd97"; 
 
+    if (!HOANG_TOKEN) return res.status(500).json({ success: false, message: "Lỗi Server: Thiếu Token." });
     if (!uid) return res.status(401).json({ error: "Chưa đăng nhập" });
 
     const userRef = db.collection('users').doc(uid);
@@ -27,76 +29,60 @@ export default async function handler(req, res) {
             t.update(userRef, { balance: balance - MACHINE_PRICE });
         });
 
-        // 2. GỌI API VỚI AXIOS & FULL HEADERS
+        // 2. GỌI HOANG.CLOUD QUA SCRAPERAPI
         const payload = { user_token: HOANG_TOKEN, cloud_id, server, input_data };
+        const targetUrl = 'https://hoang.cloud/dev/buy_device_cloud';
         
+        // Cấu hình Proxy ScraperAPI
+        // render=true: Giả lập trình duyệt (Vượt Cloudflare)
+        // keep_headers=true: Giữ nguyên Content-Type JSON
+        const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(targetUrl)}&keep_headers=true&render=true`;
+
         let apiSuccess = false;
         let apiMessage = "";
 
         try {
-            console.log("Đang gọi API HoangCloud (Axios Mode)...");
-            
-            // Cấu hình Request giả lập Chrome Windows 10
-            const response = await axios.post('https://hoang.cloud/dev/buy_device_cloud', payload, {
-                headers: {
-                    'Host': 'hoang.cloud',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'application/json, text/plain, */*',
-                    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Content-Type': 'application/json',
-                    'Origin': 'https://hoang.cloud',
-                    'Referer': 'https://hoang.cloud/',
-                    'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                    'Sec-Ch-Ua-Mobile': '?0',
-                    'Sec-Ch-Ua-Platform': '"Windows"',
-                    'Sec-Fetch-Dest': 'empty',
-                    'Sec-Fetch-Mode': 'cors',
-                    'Sec-Fetch-Site': 'same-origin',
-                    'Connection': 'keep-alive'
-                },
-                timeout: 10000 // Chờ tối đa 10s
+            console.log("Đang gọi qua ScraperAPI...");
+            const response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                timeout: 60000 // Chờ tối đa 60 giây vì ScraperAPI render hơi lâu
             });
 
-            // Nếu Axios không throw lỗi, nghĩa là status 200
-            console.log("Axios Response Data:", response.data);
-            
-            const result = response.data;
-            
-            // Kiểm tra kỹ xem nó có trả về HTML lỗi không (dù status 200)
-            if (typeof result === 'string' && result.includes('<html')) {
-                throw new Error("Vẫn bị Cloudflare chặn (HTML Response).");
-            }
+            const responseText = await response.text();
+            console.log("Scraper Response:", responseText.substring(0, 200));
 
-            if (result.success) {
-                apiSuccess = true;
-                apiMessage = result.message;
-            } else {
-                apiMessage = result.message || "Lỗi API không xác định";
+            try {
+                const result = JSON.parse(responseText);
+                if (result.success) {
+                    apiSuccess = true;
+                    apiMessage = result.message;
+                } else {
+                    apiMessage = result.message || "Lỗi từ nhà cung cấp (API trả về Failed)";
+                }
+            } catch (e) {
+                // Nếu trả về HTML -> Vẫn bị chặn hoặc lỗi Server Scraper
+                if (responseText.includes("Just a moment") || response.status === 403) {
+                    apiMessage = "Vẫn bị Cloudflare chặn (ScraperAPI chưa xuyên qua được).";
+                } else {
+                    apiMessage = "Lỗi định dạng dữ liệu trả về.";
+                }
             }
 
         } catch (err) {
-            console.error("Axios Error:", err.message);
-            if(err.response) {
-                console.error("Data:", err.response.data);
-                console.error("Status:", err.response.status);
-            }
-            apiMessage = `Lỗi kết nối: ${err.message}`;
-            // Nếu lỗi 403 hoặc 503 -> Chắc chắn bị chặn
-            if(err.response && (err.response.status === 403 || err.response.status === 503)) {
-                apiMessage = "Cloudflare chặn IP Server Vercel.";
-            }
+            console.error("Fetch Error:", err);
+            apiMessage = `Lỗi kết nối Server Proxy: ${err.message}`;
         }
 
-        // 3. XỬ LÝ KẾT QUẢ & HOÀN TIỀN
+        // 3. XỬ LÝ KẾT QUẢ
         if (apiSuccess) {
             return res.status(200).json({ success: true, message: "Mua thành công! " + apiMessage });
         } else {
-            // Hoàn tiền
+            // HOÀN TIỀN
             await userRef.update({ 
                 balance: admin.firestore.FieldValue.increment(MACHINE_PRICE) 
             });
-            
             return res.status(400).json({ 
                 success: false, 
                 message: `Thất bại: ${apiMessage}. (Đã hoàn lại 50 Xu)`
