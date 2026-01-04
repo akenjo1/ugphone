@@ -10,13 +10,13 @@ export default async function handler(req, res) {
     const HOANG_TOKEN = process.env.HOANG_CLOUD_TOKEN;
     const SCRAPER_KEY = process.env.SCRAPER_API_KEY || "5a704f2a085016e5a6ffa9f6a3cbcd97"; 
 
-    if (!HOANG_TOKEN) return res.status(500).json({ success: false, message: "Thiếu Token HoangCloud." });
+    if (!HOANG_TOKEN) return res.status(500).json({ success: false, message: "Lỗi Server: Thiếu Token HoangCloud." });
     if (!uid) return res.status(401).json({ error: "Chưa đăng nhập" });
 
     const userRef = db.collection('users').doc(uid);
 
     try {
-        // 1. TRỪ TIỀN TRƯỚC
+        // 1. TRỪ TIỀN
         await db.runTransaction(async (t) => {
             const doc = await t.get(userRef);
             const balance = doc.data()?.balance || 0;
@@ -26,31 +26,32 @@ export default async function handler(req, res) {
             t.update(userRef, { balance: balance - MACHINE_PRICE });
         });
 
-        // 2. GỌI SCRAPERAPI (CHẾ ĐỘ AUTO HEADER)
+        // 2. CẤU HÌNH GỌI SCRAPERAPI (PHIÊN BẢN VIỆT NAM)
         const payload = { user_token: HOANG_TOKEN, cloud_id, server, input_data };
         const targetUrl = 'https://hoang.cloud/dev/buy_device_cloud';
         
-        // Bỏ keep_headers=true để ScraperAPI tự sinh Header chuẩn nhất cho IP đó
-        const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(targetUrl)}&premium=true`;
+        // Thêm tham số: country_code=vn (Dùng IP Việt Nam)
+        // device_type=desktop (Giả lập máy tính)
+        // premium=true (Dùng IP sạch)
+        const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(targetUrl)}&premium=true&country_code=vn&device_type=desktop`;
 
         let apiSuccess = false;
         let apiMessage = "";
 
         try {
-            console.log("Calling ScraperAPI (Auto Header)...");
+            console.log("Đang gọi ScraperAPI (VN IP)...");
             
             const response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json' 
-                    // KHÔNG gửi thêm User-Agent hay Origin nữa
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload),
-                timeout: 40000 // 40s
+                timeout: 90000 // Tăng thời gian chờ lên 90s
             });
 
             const responseText = await response.text();
-            console.log("Scraper Response:", responseText.substring(0, 200));
+            console.log("Response:", responseText.substring(0, 150));
 
             try {
                 const result = JSON.parse(responseText);
@@ -58,22 +59,24 @@ export default async function handler(req, res) {
                     apiSuccess = true;
                     apiMessage = result.message;
                 } else {
-                    apiMessage = result.message || `Lỗi API (Code ${response.status})`;
+                    apiMessage = result.message || "Lỗi từ nhà cung cấp (Success=False)";
                 }
             } catch (e) {
+                // Kiểm tra các lỗi đặc thù
                 if (responseText.includes("Just a moment") || response.status === 403) {
-                    apiMessage = "Vẫn bị Cloudflare chặn.";
+                    apiMessage = "Cloudflare vẫn chặn (Cần thử lại sau).";
+                } else if (response.status === 500) {
+                    apiMessage = "ScraperAPI không kết nối được đích (Thử lại).";
                 } else {
-                    apiMessage = `Lỗi phản hồi: ${responseText.substring(0, 50)}...`;
+                    apiMessage = `Phản hồi lạ: ${responseText.substring(0, 100)}...`;
                 }
             }
 
         } catch (err) {
-            console.error("Fetch Error:", err);
-            apiMessage = `Lỗi kết nối Proxy: ${err.message}`;
+            apiMessage = `Lỗi Timeout/Mạng: ${err.message}`;
         }
 
-        // 3. XỬ LÝ KẾT QUẢ
+        // 3. KẾT QUẢ
         if (apiSuccess) {
             return res.status(200).json({ success: true, message: "Mua thành công! " + apiMessage });
         } else {
