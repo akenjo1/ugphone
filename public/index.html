@@ -7,13 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <style>
-        @keyframes coin-pop { 0% { transform: scale(1); color: #FACC15; } 50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } 100% { transform: scale(1); color: #FACC15; } }
+        @keyframes coin-pop { 
+            0% { transform: scale(1); color: #FACC15; } 
+            50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } 
+            100% { transform: scale(1); color: #FACC15; } 
+        }
         .money-update { animation: coin-pop 0.5s ease-in-out; }
     </style>
 
@@ -47,13 +51,15 @@
             <div class="font-black text-sky-500 text-xl tracking-tight flex items-center gap-2">
                 <i class="fa-solid fa-cloud"></i> CloudShop
             </div>
+            
             <div id="authBtn" class="hidden">
                 <button onclick="loginGoogle()" id="btnLogin" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-200 transition shadow-lg flex items-center gap-2">
                     <i class="fa-brands fa-google text-red-500"></i> Đăng nhập
                 </button>
             </div>
+
             <div id="userPanel" class="hidden flex items-center gap-3">
-                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2">
+                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2" id="balanceContainer">
                     <i class="fa-solid fa-coins text-yellow-400"></i>
                     <span id="userBalance" class="font-bold text-yellow-400 text-sm transition-all">0</span>
                 </div>
@@ -65,7 +71,7 @@
         </div>
     </nav>
 
-    <!-- Error Toast Box -->
+    <!-- Error Box -->
     <div id="errorBox" class="hidden max-w-4xl mx-auto m-4 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg shadow-lg">
         <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> BÁO LỖI</h3>
         <p id="errorMsg" class="font-mono text-xs break-all"></p>
@@ -91,9 +97,16 @@
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-link text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Vượt Link Ngắn</h3>
                 <p class="text-xs text-slate-400 mb-4">Nhận <span class="text-yellow-400 font-bold">100 Xu</span>/lượt. Tối đa 3 lượt/ngày.</p>
-                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg"><i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt</button>
-                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2"><i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn</button>
+                
+                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
+                </button>
+
+                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2">
+                    <i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn
+                </button>
             </div>
+
             <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden">
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-barcode text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Nhập Mã Code</h3>
@@ -136,13 +149,28 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
-                <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2"><i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)</button>
+                
+                <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
+                </button>
             </div>
         </div>
     </div>
 
     <!-- MODAL & Toast -->
-    <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)"><div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()"><button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button><h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link</h3><div class="space-y-4 text-sm text-slate-300"><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div><div><p class="font-bold text-white">Bấm "Lấy Link Vượt"</p><p class="text-xs mt-1">Hệ thống mở tab mới đến trang rút gọn.</p></div></div><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div><div><p class="font-bold text-white">Xác thực & Chờ đợi</p><p class="text-xs mt-1">Tích vào "I'm not a robot" và chờ đếm ngược.</p></div></div><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div><div><p class="font-bold text-white">Lấy Mã & Nhập Thưởng</p><p class="text-xs mt-1">Copy mã 6 số, quay lại đây nhập để nhận 100 Xu.</p></div></div></div><div class="mt-6 text-center"><button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button></div></div></div>
+    <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)">
+        <div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()">
+            <button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link</h3>
+            <div class="space-y-4 text-sm text-slate-300">
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div><div><p class="font-bold text-white">Bấm "Lấy Link Vượt"</p><p class="text-xs mt-1">Hệ thống mở tab mới đến trang rút gọn.</p></div></div>
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div><div><p class="font-bold text-white">Xác thực & Chờ đợi</p><p class="text-xs mt-1">Tích vào "I'm not a robot" và chờ đếm ngược.</p></div></div>
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div><div><p class="font-bold text-white">Lấy Mã & Nhập Thưởng</p><p class="text-xs mt-1">Copy mã 6 số, quay lại đây nhập để nhận 100 Xu.</p></div></div>
+            </div>
+            <div class="mt-6 text-center"><button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button></div>
+        </div>
+    </div>
+
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-32 opacity-0 transition-all duration-500 z-50 max-w-sm flex items-start gap-3"><div id="toastIcon" class="mt-1"></div><div><div id="toastTitle" class="font-bold text-sm"></div><div id="toastMsg" class="text-xs text-slate-300 mt-1"></div></div></div>
 
     <script>
@@ -171,7 +199,7 @@
             });
         });
 
-        // --- MUA MÁY QUA SCRAPERAPI (FIXED) ---
+        // --- MUA MÁY QUA REPLIT PROXY (KHẮC TINH CLOUDFLARE) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -198,37 +226,33 @@
                 const prepData = await prepRes.json();
                 if(!prepData.success) throw new Error(prepData.message || "Lỗi trừ tiền");
 
-                const token = prepData.temp_token;
                 transId = prepData.trans_id;
 
-                // 2. GỌI SCRAPERAPI
-                btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Đang khởi tạo...';
+                // 2. GỌI REPLIT PROXY
+                btn.innerHTML = '<i class="fa-solid fa-server"></i> Khởi tạo (Replit)...';
                 
-                const SCRAPER_KEY = '5a704f2a085016e5a6ffa9f6a3cbcd97'; 
-                const targetUrl = 'https://hoang.cloud/dev/buy_device_cloud';
-                // Dùng render=true để xuyên Cloudflare
-                const proxyUrl = `https://api.scraperapi.com/?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(targetUrl)}&keep_headers=true&render=true`;
+                // >>>> DÁN LINK REPLIT CỦA BẠN VÀO ĐÂY (NHỚ CÓ /buy Ở CUỐI) <<<<
+                const REPLIT_URL = "DÁN_LINK_REPLIT_VÀO_ĐÂY"; 
+                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+                if(REPLIT_URL.includes("DÁN_LINK")) {
+                    throw new Error("Admin chưa dán Link Replit vào code!");
+                }
+
+                // Payload chỉ chứa thông tin cần thiết, Token đã nằm trên Replit
                 const payload = { 
-                    user_token: token, 
                     cloud_id: document.getElementById('cloudId').value, 
                     server: document.getElementById('serverRegion').value, 
                     input_data: inputData 
                 };
 
-                const realRes = await fetch(proxyUrl, {
+                const realRes = await fetch(REPLIT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify(payload)
                 });
                 
-                const textData = await realRes.text();
-                let realData;
-                try {
-                    realData = JSON.parse(textData);
-                } catch(e) {
-                    throw new Error(`Proxy Block: ${textData.substring(0, 100)}`);
-                }
+                const realData = await realRes.json();
 
                 if (realData.success) {
                     showToast('Thành Công', realData.message, 'success');
