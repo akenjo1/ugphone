@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -65,7 +65,7 @@
                 <i class="fa-brands fa-google"></i> Bắt đầu ngay
             </button>
             <div class="mt-6 p-2 bg-black/30 rounded border border-white/10 text-[10px] text-slate-400 inline-block">
-                Domain: <span id="currentDomain" class="text-yellow-400 font-mono font-bold">...</span>
+                Domain: <span id="currentDomain" class="text-yellow-400 font-mono font-bold">Checking...</span>
             </div>
         </div>
 
@@ -75,9 +75,14 @@
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-link text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Vượt Link Ngắn</h3>
                 <p class="text-xs text-slate-400 mb-4">Nhận <span class="text-yellow-400 font-bold">100 Xu</span>/lượt. Tối đa 3 lượt/ngày.</p>
-                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg"><i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt</button>
-                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2"><i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn</button>
+                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
+                </button>
+                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2">
+                    <i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn
+                </button>
             </div>
+
             <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden">
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-barcode text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Nhập Mã Code</h3>
@@ -128,17 +133,43 @@
         </div>
     </div>
 
-    <!-- MODAL & Toast -->
-    <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)"><div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()"><button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button><h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link</h3><div class="space-y-4 text-sm text-slate-300"><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div><div><p class="font-bold text-white">Bấm "Lấy Link Vượt"</p><p class="text-xs mt-1">Hệ thống mở tab mới đến trang rút gọn.</p></div></div><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div><div><p class="font-bold text-white">Xác thực & Chờ đợi</p><p class="text-xs mt-1">Tích vào "I'm not a robot" và chờ đếm ngược.</p></div></div><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div><div><p class="font-bold text-white">Lấy Mã & Nhập Thưởng</p><p class="text-xs mt-1">Copy mã 6 số, quay lại đây nhập để nhận 100 Xu.</p></div></div></div><div class="mt-6 text-center"><button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button></div></div></div>
+    <!-- MODAL HƯỚNG DẪN -->
+    <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)">
+        <div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()">
+            <button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link</h3>
+            <div class="space-y-4 text-sm text-slate-300">
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div><div><p class="font-bold text-white">Bấm "Lấy Link Vượt"</p><p class="text-xs mt-1">Hệ thống mở tab mới đến trang rút gọn.</p></div></div>
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div><div><p class="font-bold text-white">Xác thực & Chờ đợi</p><p class="text-xs mt-1">Tích vào "I'm not a robot" và chờ đếm ngược.</p></div></div>
+                <div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div><div><p class="font-bold text-white">Lấy Mã & Nhập Thưởng</p><p class="text-xs mt-1">Copy mã 6 số, quay lại đây nhập để nhận 100 Xu.</p></div></div>
+            </div>
+            <div class="mt-6 text-center"><button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-32 opacity-0 transition-all duration-500 z-50 max-w-sm flex items-start gap-3"><div id="toastIcon" class="mt-1"></div><div><div id="toastTitle" class="font-bold text-sm"></div><div id="toastMsg" class="text-xs text-slate-300 mt-1"></div></div></div>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyAMN-_pwnxFtAjX3DPnZKIijscpdicEwlw", authDomain: "ugphone-8879f.firebaseapp.com", projectId: "ugphone-8879f", storageBucket: "ugphone-8879f.firebasestorage.app", messagingSenderId: "233888764150", appId: "1:233888764150:web:dbc486f46d850fb97d5cd7" };
+        // CẤU HÌNH FIREBASE
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAMN-_pwnxFtAjX3DPnZKIijscpdicEwlw", 
+            authDomain: "ugphone-8879f.firebaseapp.com", 
+            projectId: "ugphone-8879f", 
+            storageBucket: "ugphone-8879f.firebasestorage.app", 
+            messagingSenderId: "233888764150", 
+            appId: "1:233888764150:web:dbc486f46d850fb97d5cd7" 
+        };
+
         try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error(e); }
         const auth = firebase.auth();
         const db = firebase.firestore();
-        let currentUser = null, unsubscribeBalance = null, previousBalance = -1, toastTimeout = null;
+        let currentUser = null;
+        let unsubscribeBalance = null;
+        let previousBalance = -1;
+        let toastTimeout = null;
 
+        // AUTH & UI LOGIC
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('currentDomain').innerText = window.location.hostname;
             auth.onAuthStateChanged(user => {
@@ -158,23 +189,32 @@
             });
         });
 
-        // --- MUA MÁY QUA BACKEND (ĐÃ CÓ PROXY XỊN) ---
+        function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
+        function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
+        function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
+        function handleLoginError(error) { let userMsg = error.message; if (error.code === 'auth/unauthorized-domain') userMsg = `Lỗi Domain: Thêm "${window.location.hostname}" vào Firebase Console.`; if (error.code === 'auth/popup-closed-by-user') userMsg = "Đã hủy đăng nhập"; showError(userMsg); }
+        function logout() { auth.signOut(); }
+        function toggleUI(isLoggedIn) { const ids = ['authBtn', 'welcomeBanner']; const userIds = ['userPanel', 'earnSection', 'shopSection']; ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', isLoggedIn); }); userIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', !isLoggedIn); }); }
+        function showError(msg) { const box = document.getElementById('errorBox'); document.getElementById('errorMsg').innerText = msg; box.classList.remove('hidden'); }
+        
+        async function generateLink() { if(!currentUser) return; const btn = document.getElementById('btnGenLink'); btn.disabled = true; btn.innerHTML = '...'; try { const res = await fetch('/api/gen-link', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ uid: currentUser.uid, host_url: window.location.origin }) }); const data = await res.json(); if(data.success) { window.open(data.shortenedUrl, '_blank'); showToast('OK', 'Đã mở link!', 'success'); } else showToast('Lỗi', data.error, 'error'); } catch(e) { showToast('Lỗi', 'Lỗi mạng', 'error'); } finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt'; } }
+        
+        async function submitCode() { if(!currentUser) return; const code = document.getElementById('promoCode').value.trim(); if(!code) return showToast('Lỗi', 'Chưa nhập mã', 'warning'); const btn = document.getElementById('btnSubmitCode'); btn.disabled = true; btn.innerHTML = '...'; try { const res = await fetch('/api/claim', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ uid: currentUser.uid, code: code }) }); const data = await res.json(); if(data.success) { showToast('Thành công', data.message, 'success'); document.getElementById('promoCode').value = ''; } else { showToast('Lỗi', data.error, 'error'); } } catch(e) { showToast('Lỗi', 'Lỗi hệ thống', 'error'); } finally { btn.disabled = false; btn.innerHTML = 'Nhận'; } }
+        
+        // --- LOGIC MUA MÁY (GỌI BACKEND VERCEL) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
             if(!inputData) return showToast('Thiếu tin', 'Nhập dữ liệu', 'warning');
-            
             const currentBal = parseInt(document.getElementById('userBalance').innerText) || 0;
             if(currentBal < 50) return showToast('Thiếu Xu', 'Cần 50 Xu', 'error');
-            
             if(!confirm("Mua máy với giá 50 Xu?")) return;
             
             const btn = document.getElementById('btnBuy');
-            btn.disabled = true; 
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+            btn.disabled = true; btn.innerText = 'Đang xử lý (Chờ 10s)...';
 
             try {
-                // Gọi API Backend (Nơi đã cài đặt Proxy IPv4)
+                // Gọi tới backend /api/buy (nơi đã gắn Proxy)
                 const res = await fetch('/api/buy', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -187,33 +227,18 @@
                 });
                 
                 const data = await res.json();
-
                 if(data.success) {
-                    showToast('Thành Công', data.message, 'success');
+                    showToast('Thành công', data.message, 'success');
                 } else {
-                    // Nếu lỗi do proxy hoặc hết hàng, backend sẽ tự hoàn tiền và báo ở đây
-                    alert(`❌ THẤT BẠI!\n\n${data.message}`);
+                    alert(`❌ THẤT BẠI: ${data.message}`);
                 }
-
-            } catch (err) {
-                console.error(err);
-                showToast('Lỗi', 'Lỗi kết nối Server', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)';
+            } catch(e) { 
+                console.error(e);
+                alert("❌ Lỗi Mạng/Timeout: Proxy quá chậm hoặc Server lỗi.");
             }
+            finally { btn.disabled = false; btn.innerText = 'Mua Ngay (50 Xu)'; }
         }
 
-        // ... Helpers (openGuide, loginGoogle, generateLink...) ...
-        function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
-        function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
-        function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
-        function handleLoginError(error) { let userMsg = error.message; if (error.code === 'auth/unauthorized-domain') userMsg = `Lỗi Domain: Thêm "${window.location.hostname}" vào Firebase Console.`; if (error.code === 'auth/popup-closed-by-user') userMsg = "Đã hủy đăng nhập"; showError(userMsg); }
-        function logout() { auth.signOut(); }
-        function toggleUI(isLoggedIn) { const ids = ['authBtn', 'welcomeBanner']; const userIds = ['userPanel', 'earnSection', 'shopSection']; ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', isLoggedIn); }); userIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', !isLoggedIn); }); }
-        function showError(msg) { const box = document.getElementById('errorBox'); document.getElementById('errorMsg').innerText = msg; box.classList.remove('hidden'); }
-        async function generateLink() { if(!currentUser) return; const btn = document.getElementById('btnGenLink'); btn.disabled = true; btn.innerHTML = '...'; try { const res = await fetch('/api/gen-link', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ uid: currentUser.uid, host_url: window.location.origin }) }); const data = await res.json(); if(data.success) { window.open(data.shortenedUrl, '_blank'); showToast('OK', 'Đã mở link!', 'success'); } else showToast('Lỗi', data.error, 'error'); } catch(e) { showToast('Lỗi', 'Lỗi mạng', 'error'); } finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt'; } }
-        async function submitCode() { if(!currentUser) return; const code = document.getElementById('promoCode').value.trim(); if(!code) return showToast('Lỗi', 'Chưa nhập mã', 'warning'); const btn = document.getElementById('btnSubmitCode'); btn.disabled = true; btn.innerHTML = '...'; try { const res = await fetch('/api/claim', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ uid: currentUser.uid, code: code }) }); const data = await res.json(); if(data.success) { showToast('Thành công', data.message, 'success'); document.getElementById('promoCode').value = ''; } else { showToast('Lỗi', data.error, 'error'); } } catch(e) { showToast('Lỗi', 'Lỗi hệ thống', 'error'); } finally { btn.disabled = false; btn.innerHTML = 'Nhận'; } }
         function toggleServer() { const val = document.getElementById('cloudId').value; const svDiv = document.getElementById('serverDiv'); val === 'UG' ? svDiv.classList.remove('hidden') : svDiv.classList.add('hidden'); }
         function showToast(title, msg, type) { const toast = document.getElementById('toast'); const tTitle = document.getElementById('toastTitle'); const tMsg = document.getElementById('toastMsg'); tTitle.innerText = title; tMsg.innerText = msg; toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 transition-all duration-500 z-50 max-w-sm flex items-start gap-3 ${type === 'success' ? 'border-green-500' : type === 'error' ? 'border-red-500' : 'border-yellow-500'}`; toast.classList.remove('translate-y-32', 'opacity-0'); if (toastTimeout) clearTimeout(toastTimeout); toastTimeout = setTimeout(() => { toast.classList.add('translate-y-32', 'opacity-0'); }, 5000); }
     </script>
