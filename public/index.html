@@ -38,7 +38,7 @@
 
     <!-- Error Box -->
     <div id="errorBox" class="hidden max-w-4xl mx-auto m-4 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg shadow-lg">
-        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> LỖI</h3>
+        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> BÁO LỖI</h3>
         <p id="errorMsg" class="font-mono text-xs break-all"></p>
         <button onclick="this.parentElement.classList.add('hidden')" class="mt-2 text-xs underline">Đóng</button>
     </div>
@@ -116,22 +116,15 @@
         try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error(e); }
         const auth = firebase.auth();
         const db = firebase.firestore();
-        let currentUser = null;
-        let unsubscribeBalance = null;
-        let previousBalance = -1;
-        let toastTimeout = null;
+        let currentUser = null, unsubscribeBalance = null, previousBalance = -1, toastTimeout = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             auth.onAuthStateChanged(user => {
                 if (user) {
-                    currentUser = user;
-                    toggleUI(true);
-                    document.getElementById('userAvatar').src = user.photoURL;
+                    currentUser = user; toggleUI(true); document.getElementById('userAvatar').src = user.photoURL;
                     if(unsubscribeBalance) unsubscribeBalance();
                     unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot((doc) => {
-                        const balEl = document.getElementById('userBalance');
-                        let balance = 0;
-                        if (doc.exists) balance = doc.data().balance || 0;
+                        const balEl = document.getElementById('userBalance'); let balance = 0; if (doc.exists) balance = doc.data().balance || 0;
                         balEl.innerText = balance;
                         if (previousBalance !== -1 && balance !== previousBalance) {
                             balEl.classList.remove('money-update'); void balEl.offsetWidth; balEl.classList.add('money-update');
@@ -139,13 +132,11 @@
                         }
                         previousBalance = balance;
                     });
-                } else {
-                    currentUser = null; toggleUI(false); if(unsubscribeBalance) unsubscribeBalance();
-                }
+                } else { currentUser = null; toggleUI(false); if(unsubscribeBalance) unsubscribeBalance(); }
             });
         });
 
-        // --- MUA MÁY QUA PROXY ---
+        // --- MUA MÁY ĐA KÊNH (MULTI-PROXY) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -158,80 +149,107 @@
             
             const btn = document.getElementById('btnBuy');
             btn.disabled = true; 
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Thanh toán...';
-
+            
             let transId = null;
+            let lastError = "";
 
             try {
-                // BƯỚC 1: TRỪ TIỀN
+                // 1. TRỪ TIỀN
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Thanh toán...';
                 const prepRes = await fetch('/api/prepare-buy', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ uid: currentUser.uid })
                 });
                 const prepData = await prepRes.json();
-
                 if(!prepData.success) throw new Error(prepData.message || "Lỗi trừ tiền");
 
                 const token = prepData.temp_token;
                 transId = prepData.trans_id;
 
-                // BƯỚC 2: GỌI CLIENT QUA CORS PROXY
-                // Sử dụng corsproxy.io để vượt lỗi CORS
-                btn.innerHTML = '<i class="fa-solid fa-server"></i> Khởi tạo (Proxy)...';
+                const payload = { 
+                    user_token: token, 
+                    cloud_id: document.getElementById('cloudId').value, 
+                    server: document.getElementById('serverRegion').value, 
+                    input_data: inputData 
+                };
                 
-                const cloudId = document.getElementById('cloudId').value;
-                const server = document.getElementById('serverRegion').value;
-                const payload = { user_token: token, cloud_id: cloudId, server: server, input_data: inputData };
-
-                // Target URL
                 const targetUrl = 'https://hoang.cloud/dev/buy_device_cloud';
-                // Proxy URL: Ghép proxy + target
-                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
 
-                const realRes = await fetch(proxyUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                // Proxy có thể trả về lỗi của chính nó
-                if (!realRes.ok) {
-                    throw new Error(`Proxy Error: ${realRes.status} ${realRes.statusText}`);
+                // 2. THỬ LẦN LƯỢT CÁC KÊNH (PROXY)
+                const proxies = [
+                    { name: 'Kênh 1 (CodeTabs)', url: 'https://api.codetabs.com/v1/proxy?quest=' + targetUrl },
+                    { name: 'Kênh 2 (ThingProxy)', url: 'https://thingproxy.freeboard.io/fetch/' + targetUrl },
+                    { name: 'Kênh 3 (CorsProxy)', url: 'https://corsproxy.io/?' + encodeURIComponent(targetUrl) }
+                ];
+
+                let success = false;
+                let successMsg = "";
+
+                for (const proxy of proxies) {
+                    btn.innerHTML = `<i class="fa-solid fa-network-wired"></i> Thử ${proxy.name}...`;
+                    console.log(`Trying ${proxy.name}...`);
+                    
+                    try {
+                        const res = await fetch(proxy.url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        // Nếu proxy trả về lỗi HTTP nhưng không phải lỗi mạng (ví dụ 403, 500 từ server đích)
+                        // Thì ta vẫn đọc nội dung xem có phải lỗi từ HoangCloud không
+                        const text = await res.text();
+                        console.log(`${proxy.name} Response:`, text);
+
+                        try {
+                            const json = JSON.parse(text);
+                            if (json.success) {
+                                success = true;
+                                successMsg = json.message;
+                                break; // Thành công -> Thoát vòng lặp
+                            } else {
+                                // API trả lời nhưng báo lỗi (ví dụ Token sai, hết hàng) -> Không thử proxy khác nữa
+                                throw new Error(json.message || "Lỗi từ HoangCloud");
+                            }
+                        } catch (e) {
+                            // Nếu không phải JSON (ví dụ HTML Cloudflare) -> coi như Proxy này bị chặn -> Thử cái tiếp theo
+                            lastError = `Proxy ${proxy.name} bị chặn.`;
+                            continue;
+                        }
+
+                    } catch (err) {
+                        lastError = err.message;
+                        console.error(`${proxy.name} Failed:`, err);
+                        // Lỗi mạng -> Thử cái tiếp theo
+                    }
                 }
 
-                const realData = await realRes.json();
-
-                if (realData.success) {
-                    showToast('Thành Công', realData.message, 'success');
+                if (success) {
+                    showToast('Thành Công', successMsg, 'success');
                 } else {
-                    throw new Error(realData.message || "Lỗi từ nhà cung cấp");
+                    // Nếu thử hết proxy mà vẫn lỗi
+                    throw new Error(lastError || "Tất cả kênh kết nối đều bị chặn.");
                 }
 
             } catch (err) {
-                console.error("Lỗi Mua Hàng:", err);
+                console.error("Final Error:", err);
                 
-                // PHÂN TÍCH LỖI
-                let friendlyError = err.message;
-                if (err.message === 'Failed to fetch') {
-                    friendlyError = "Lỗi Mạng: Không thể kết nối đến Proxy hoặc bị chặn.";
-                }
-
-                // NẾU CÓ TRANSID THÌ GỌI HOÀN TIỀN
+                // HOÀN TIỀN
                 if (transId) {
                     btn.innerHTML = 'Đang hoàn tiền...';
                     try {
                         await fetch('/api/refund', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: friendlyError })
+                            body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: err.message })
                         });
-                        alert(`❌ MUA THẤT BẠI!\n\nLý do: ${friendlyError}\n\n✅ Đã hoàn lại 50 Xu.`);
+                        alert(`❌ MUA THẤT BẠI!\n\nLý do: ${err.message}\n\n✅ Đã hoàn lại 50 Xu.`);
                     } catch (refundErr) {
-                        alert(`❌ LỖI KÉP! Mua lỗi & Hoàn tiền lỗi. Báo Admin ngay.`);
+                        alert(`❌ LỖI KÉP! Mua lỗi & Hoàn tiền lỗi. Báo Admin.`);
                     }
                 } else {
-                    showToast('Lỗi', friendlyError, 'error');
+                    showToast('Lỗi', err.message, 'error');
                 }
             } finally {
                 btn.disabled = false;
@@ -239,7 +257,7 @@
             }
         }
 
-        // ... Các hàm khác giữ nguyên ...
+        // ... Helpers ...
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
         function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
