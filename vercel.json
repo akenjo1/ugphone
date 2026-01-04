@@ -5,8 +5,6 @@
     }
   },
   "rewrites": [
-    { "source": "/api/prepare-buy", "destination": "/api/prepare_buy.js" },
-    { "source": "/api/refund", "destination": "/api/refund.js" },
     { "source": "/api/buy", "destination": "/api/buy.js" },
     { "source": "/api/gen-link", "destination": "/api/gen_link.js" },
     { "source": "/api/claim", "destination": "/api/claim.js" },
