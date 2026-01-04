@@ -20,8 +20,30 @@
         }
         .money-update { animation: coin-pop 0.5s ease-in-out; }
     </style>
+
+    <!-- Script Báo Lỗi Khẩn Cấp (Tránh màn hình đen) -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const box = document.getElementById('criticalError');
+            if(box) {
+                box.classList.remove('hidden');
+                document.getElementById('criticalErrorMsg').innerText = `${message}\nTại dòng: ${lineno}`;
+            }
+            console.error("Critical Error:", message);
+        };
+    </script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+    <!-- MÀN HÌNH BÁO LỖI (Nếu Web sập sẽ hiện cái này) -->
+    <div id="criticalError" class="fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-red-900 border-2 border-red-500 p-6 rounded-xl max-w-lg text-center shadow-2xl">
+            <h1 class="text-3xl font-bold text-white mb-4"><i class="fa-solid fa-bug"></i> WEB GẶP LỖI</h1>
+            <p class="text-red-200 mb-2">Đã xảy ra lỗi cú pháp Javascript:</p>
+            <code id="criticalErrorMsg" class="block bg-black/50 p-4 rounded text-left font-mono text-sm text-red-400 mb-6 border border-red-800">...</code>
+            <button onclick="window.location.reload()" class="bg-white text-red-900 px-8 py-3 rounded-full font-bold hover:bg-gray-200 transition">Tải Lại Trang</button>
+        </div>
+    </div>
 
     <!-- Navbar -->
     <nav class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
@@ -49,11 +71,11 @@
         </div>
     </nav>
 
-    <!-- Error Box -->
+    <!-- Alert Box (Lỗi nhẹ) -->
     <div id="errorBox" class="hidden max-w-4xl mx-auto m-4 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg shadow-lg">
-        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> BÁO LỖI</h3>
+        <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-circle-exclamation"></i> THÔNG BÁO LỖI</h3>
         <p id="errorMsg" class="font-mono text-xs break-all"></p>
-        <button onclick="this.parentElement.classList.add('hidden')" class="mt-2 text-xs underline">Đóng</button>
+        <button onclick="this.parentElement.classList.add('hidden')" class="mt-2 text-xs underline hover:text-white">Đóng thông báo</button>
     </div>
 
     <div class="max-w-4xl mx-auto p-4 space-y-8 pb-20">
@@ -125,7 +147,6 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
-                
                 <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
                     <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
                 </button>
@@ -151,7 +172,7 @@
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-32 opacity-0 transition-all duration-500 z-50 max-w-sm flex items-start gap-3"><div id="toastIcon" class="mt-1"></div><div><div id="toastTitle" class="font-bold text-sm"></div><div id="toastMsg" class="text-xs text-slate-300 mt-1"></div></div></div>
 
     <script>
-        // CẤU HÌNH FIREBASE
+        // CẤU HÌNH FIREBASE CHUẨN
         const firebaseConfig = { 
             apiKey: "AIzaSyAMN-_pwnxFtAjX3DPnZKIijscpdicEwlw", 
             authDomain: "ugphone-8879f.firebaseapp.com", 
@@ -161,7 +182,14 @@
             appId: "1:233888764150:web:dbc486f46d850fb97d5cd7" 
         };
 
-        try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error(e); }
+        // Khởi tạo Firebase
+        try { 
+            firebase.initializeApp(firebaseConfig); 
+        } catch (e) { 
+            console.error(e); 
+            // Nếu lỗi init thì vẫn không chết trang
+        }
+
         const auth = firebase.auth();
         const db = firebase.firestore();
         let currentUser = null;
@@ -169,15 +197,20 @@
         let previousBalance = -1;
         let toastTimeout = null;
 
-        // AUTH & UI LOGIC
+        // --- AUTH & UI LOGIC ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('currentDomain').innerText = window.location.hostname;
+            
             auth.onAuthStateChanged(user => {
                 if (user) {
-                    currentUser = user; toggleUI(true); document.getElementById('userAvatar').src = user.photoURL;
+                    currentUser = user; 
+                    toggleUI(true); 
+                    document.getElementById('userAvatar').src = user.photoURL;
                     if(unsubscribeBalance) unsubscribeBalance();
                     unsubscribeBalance = db.collection('users').doc(user.uid).onSnapshot((doc) => {
-                        const balEl = document.getElementById('userBalance'); let balance = 0; if (doc.exists) balance = doc.data().balance || 0;
+                        const balEl = document.getElementById('userBalance'); 
+                        let balance = 0; 
+                        if (doc.exists) balance = doc.data().balance || 0;
                         balEl.innerText = balance;
                         if (previousBalance !== -1 && balance !== previousBalance) {
                             balEl.classList.remove('money-update'); void balEl.offsetWidth; balEl.classList.add('money-update');
@@ -185,36 +218,100 @@
                         }
                         previousBalance = balance;
                     });
-                } else { currentUser = null; toggleUI(false); if(unsubscribeBalance) unsubscribeBalance(); }
+                } else { 
+                    currentUser = null; 
+                    toggleUI(false); 
+                    if(unsubscribeBalance) unsubscribeBalance(); 
+                }
             });
         });
 
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
-        function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
-        function handleLoginError(error) { let userMsg = error.message; if (error.code === 'auth/unauthorized-domain') userMsg = `Lỗi Domain: Thêm "${window.location.hostname}" vào Firebase Console.`; if (error.code === 'auth/popup-closed-by-user') userMsg = "Đã hủy đăng nhập"; showError(userMsg); }
+        
+        function loginGoogle() { 
+            const btn = document.getElementById('btnLogin'); 
+            if(btn) btn.innerHTML = '...'; 
+            const provider = new firebase.auth.GoogleAuthProvider(); 
+            auth.signInWithPopup(provider).catch(handleLoginError); 
+        }
+
+        function handleLoginError(error) { 
+            let userMsg = error.message; 
+            if (error.code === 'auth/unauthorized-domain') userMsg = `Lỗi Domain: Thêm "${window.location.hostname}" vào Firebase Console.`; 
+            if (error.code === 'auth/popup-closed-by-user') userMsg = "Đã hủy đăng nhập"; 
+            showError(userMsg); 
+        }
+
         function logout() { auth.signOut(); }
-        function toggleUI(isLoggedIn) { const ids = ['authBtn', 'welcomeBanner']; const userIds = ['userPanel', 'earnSection', 'shopSection']; ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', isLoggedIn); }); userIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', !isLoggedIn); }); }
-        function showError(msg) { const box = document.getElementById('errorBox'); document.getElementById('errorMsg').innerText = msg; box.classList.remove('hidden'); }
-        
-        async function generateLink() { if(!currentUser) return; const btn = document.getElementById('btnGenLink'); btn.disabled = true; btn.innerHTML = '...'; try { const res = await fetch('/api/gen-link', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ uid: currentUser.uid, host_url: window.location.origin }) }); const data = await res.json(); if(data.success) { window.open(data.shortenedUrl, '_blank'); showToast('OK', 'Đã mở link!', 'success'); } else showToast('Lỗi', data.error, 'error'); } catch(e) { showToast('Lỗi', 'Lỗi mạng', 'error'); } finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt'; } }
-        
-        async function submitCode() { if(!currentUser) return; const code = document.getElementById('promoCode').value.trim(); if(!code) return showToast('Lỗi', 'Chưa nhập mã', 'warning'); const btn = document.getElementById('btnSubmitCode'); btn.disabled = true; btn.innerHTML = '...'; try { const res = await fetch('/api/claim', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ uid: currentUser.uid, code: code }) }); const data = await res.json(); if(data.success) { showToast('Thành công', data.message, 'success'); document.getElementById('promoCode').value = ''; } else { showToast('Lỗi', data.error, 'error'); } } catch(e) { showToast('Lỗi', 'Lỗi hệ thống', 'error'); } finally { btn.disabled = false; btn.innerHTML = 'Nhận'; } }
-        
-        // --- LOGIC MUA MÁY (GỌI BACKEND VERCEL) ---
+
+        function toggleUI(isLoggedIn) { 
+            const ids = ['authBtn', 'welcomeBanner']; 
+            const userIds = ['userPanel', 'earnSection', 'shopSection']; 
+            ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', isLoggedIn); }); 
+            userIds.forEach(id => { const el = document.getElementById(id); if(el) el.classList.toggle('hidden', !isLoggedIn); }); 
+        }
+
+        function showError(msg) { 
+            const box = document.getElementById('errorBox'); 
+            document.getElementById('errorMsg').innerText = msg; 
+            box.classList.remove('hidden'); 
+        }
+
+        // --- BACKEND LOGIC ---
+        async function generateLink() { 
+            if(!currentUser) return; 
+            const btn = document.getElementById('btnGenLink'); 
+            btn.disabled = true; btn.innerHTML = '...'; 
+            try { 
+                const res = await fetch('/api/gen-link', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ uid: currentUser.uid, host_url: window.location.origin }) 
+                }); 
+                const data = await res.json(); 
+                if(data.success) { window.open(data.shortenedUrl, '_blank'); showToast('OK', 'Đã mở link!', 'success'); } 
+                else showToast('Lỗi', data.error, 'error'); 
+            } catch(e) { showToast('Lỗi', 'Lỗi mạng', 'error'); } 
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt'; } 
+        }
+
+        async function submitCode() { 
+            if(!currentUser) return; 
+            const code = document.getElementById('promoCode').value.trim(); 
+            if(!code) return showToast('Lỗi', 'Chưa nhập mã', 'warning'); 
+            const btn = document.getElementById('btnSubmitCode'); 
+            btn.disabled = true; btn.innerHTML = '...'; 
+            try { 
+                const res = await fetch('/api/claim', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ uid: currentUser.uid, code: code }) 
+                }); 
+                const data = await res.json(); 
+                if(data.success) { 
+                    showToast('Thành công', data.message, 'success'); 
+                    document.getElementById('promoCode').value = ''; 
+                } else { showToast('Lỗi', data.error, 'error'); } 
+            } catch(e) { showToast('Lỗi', 'Lỗi hệ thống', 'error'); } 
+            finally { btn.disabled = false; btn.innerHTML = 'Nhận'; } 
+        }
+
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
             if(!inputData) return showToast('Thiếu tin', 'Nhập dữ liệu', 'warning');
+            
             const currentBal = parseInt(document.getElementById('userBalance').innerText) || 0;
             if(currentBal < 50) return showToast('Thiếu Xu', 'Cần 50 Xu', 'error');
+            
             if(!confirm("Mua máy với giá 50 Xu?")) return;
             
             const btn = document.getElementById('btnBuy');
             btn.disabled = true; btn.innerText = 'Đang xử lý (Chờ 10s)...';
 
             try {
-                // Gọi tới backend /api/buy (nơi đã gắn Proxy)
+                // Gọi tới API Backend (Nơi đã cấu hình Proxy)
                 const res = await fetch('/api/buy', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -239,8 +336,23 @@
             finally { btn.disabled = false; btn.innerText = 'Mua Ngay (50 Xu)'; }
         }
 
-        function toggleServer() { const val = document.getElementById('cloudId').value; const svDiv = document.getElementById('serverDiv'); val === 'UG' ? svDiv.classList.remove('hidden') : svDiv.classList.add('hidden'); }
-        function showToast(title, msg, type) { const toast = document.getElementById('toast'); const tTitle = document.getElementById('toastTitle'); const tMsg = document.getElementById('toastMsg'); tTitle.innerText = title; tMsg.innerText = msg; toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 transition-all duration-500 z-50 max-w-sm flex items-start gap-3 ${type === 'success' ? 'border-green-500' : type === 'error' ? 'border-red-500' : 'border-yellow-500'}`; toast.classList.remove('translate-y-32', 'opacity-0'); if (toastTimeout) clearTimeout(toastTimeout); toastTimeout = setTimeout(() => { toast.classList.add('translate-y-32', 'opacity-0'); }, 5000); }
+        function toggleServer() { 
+            const val = document.getElementById('cloudId').value; 
+            const svDiv = document.getElementById('serverDiv'); 
+            val === 'UG' ? svDiv.classList.remove('hidden') : svDiv.classList.add('hidden'); 
+        }
+
+        function showToast(title, msg, type) { 
+            const toast = document.getElementById('toast'); 
+            const tTitle = document.getElementById('toastTitle'); 
+            const tMsg = document.getElementById('toastMsg'); 
+            tTitle.innerText = title; 
+            tMsg.innerText = msg; 
+            toast.className = `fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 transition-all duration-500 z-50 max-w-sm flex items-start gap-3 ${type === 'success' ? 'border-green-500' : type === 'error' ? 'border-red-500' : 'border-yellow-500'}`; 
+            toast.classList.remove('translate-y-32', 'opacity-0'); 
+            if (toastTimeout) clearTimeout(toastTimeout); 
+            toastTimeout = setTimeout(() => { toast.classList.add('translate-y-32', 'opacity-0'); }, 5000); 
+        }
     </script>
 </body>
 </html>
