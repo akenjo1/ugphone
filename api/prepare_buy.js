@@ -5,12 +5,15 @@ export default async function handler(req, res) {
 
     const { uid } = req.body;
     const MACHINE_PRICE = 50; 
+    
+    // Lấy Token và Key từ biến môi trường
     const HOANG_TOKEN = process.env.HOANG_CLOUD_TOKEN;
+    // Nếu chưa cấu hình biến môi trường thì dùng key cứng bạn đã cung cấp
+    const SCRAPER_KEY = process.env.SCRAPER_API_KEY || "5a704f2a085016e5a6ffa9f6a3cbcd97";
 
     if (!uid) return res.status(401).json({ error: "Chưa đăng nhập" });
 
     const userRef = db.collection('users').doc(uid);
-    // Tạo ID giao dịch ngẫu nhiên để đối soát hoàn tiền
     const transId = db.collection('transactions').doc().id; 
 
     try {
@@ -24,20 +27,21 @@ export default async function handler(req, res) {
             // 1. Trừ tiền
             t.update(userRef, { balance: balance - MACHINE_PRICE });
 
-            // 2. Tạo bản ghi giao dịch (để lát nữa nếu lỗi thì hoàn tiền dựa vào cái này)
+            // 2. Lưu lịch sử
             t.set(db.collection('transactions').doc(transId), {
                 uid: uid,
                 amount: MACHINE_PRICE,
                 type: 'buy_machine',
-                status: 'pending', // Đang chờ kết quả từ Client
+                status: 'pending',
                 createdAt: admin.firestore.FieldValue.serverTimestamp()
             });
         });
 
-        // Trả về Token và TransID cho Web
+        // 3. Trả về Token và Key cho Client tự gọi
         return res.status(200).json({ 
             success: true, 
-            temp_token: HOANG_TOKEN, // Token để web dùng
+            temp_token: HOANG_TOKEN,
+            scraper_key: SCRAPER_KEY,
             trans_id: transId 
         });
 
