@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase SDK Compat -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -75,16 +75,9 @@
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-link text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Vượt Link Ngắn</h3>
                 <p class="text-xs text-slate-400 mb-4">Nhận <span class="text-yellow-400 font-bold">100 Xu</span>/lượt. Tối đa 3 lượt/ngày.</p>
-                
-                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg">
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
-                </button>
-
-                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2">
-                    <i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn
-                </button>
+                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg"><i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt</button>
+                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2"><i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn</button>
             </div>
-
             <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden">
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-barcode text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Nhập Mã Code</h3>
@@ -127,10 +120,7 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
-                
-                <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
-                </button>
+                <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2"><i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)</button>
             </div>
         </div>
     </div>
@@ -165,7 +155,7 @@
             });
         });
 
-        // --- MUA MÁY QUA SCRAPERAPI (KEY ĐÃ CẬP NHẬT) ---
+        // --- MUA MÁY QUA SCRAPERAPI (FIX HTTPS & CORS) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -198,13 +188,14 @@
                 // 2. GỌI SCRAPERAPI
                 btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Đang khởi tạo...';
                 
-                // >>>> KEY SCRAPERAPI CỦA BẠN ĐÃ ĐƯỢC THÊM <<<<
+                // --- CẤU HÌNH SCRAPERAPI ---
                 const SCRAPER_KEY = '5a704f2a085016e5a6ffa9f6a3cbcd97'; 
-                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
                 const targetUrl = 'https://hoang.cloud/dev/buy_device_cloud';
-                // Proxy URL với ScraperAPI
-                const proxyUrl = `http://api.scraperapi.com?api_key=${SCRAPER_KEY}&url=${targetUrl}&keep_headers=true`;
+                
+                // LƯU Ý: Phải dùng HTTPS để tránh lỗi Mixed Content
+                // keep_headers=true: Giữ nguyên Headers (quan trọng cho JSON)
+                // render=true: Giúp vượt Cloudflare Under Attack Mode (quan trọng nhất)
+                const proxyUrl = `https://api.scraperapi.com/?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(targetUrl)}&keep_headers=true&render=true`;
 
                 const payload = { 
                     user_token: token, 
@@ -219,6 +210,12 @@
                     body: JSON.stringify(payload)
                 });
                 
+                // Kiểm tra lỗi từ Proxy trước khi Parse JSON
+                if (!realRes.ok) {
+                    const txt = await realRes.text();
+                    throw new Error(`Scraper Error ${realRes.status}: ${txt}`);
+                }
+
                 const realData = await realRes.json();
 
                 if (realData.success) {
