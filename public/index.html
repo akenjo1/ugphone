@@ -1,7 +1,5 @@
 <!DOCTYPE html>
 <html lang="vi">
-<!-- ... (Giữ nguyên phần đầu HTML, CSS, Auth...) ... -->
-<!-- Chỉ thay thế đoạn Script và Body, tôi sẽ viết lại toàn bộ file để bạn copy cho dễ -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -109,7 +107,7 @@
         </div>
     </div>
 
-    <!-- MODAL & Toast (Giữ nguyên như cũ) -->
+    <!-- MODAL & Toast -->
     <div id="guideModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeGuide(event)"><div class="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 relative shadow-2xl transform transition-all scale-95" onclick="event.stopPropagation()"><button onclick="closeGuide()" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button><h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open text-sky-500"></i> Hướng Dẫn Vượt Link</h3><div class="space-y-4 text-sm text-slate-300"><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">1</div><div><p class="font-bold text-white">Bấm "Lấy Link Vượt"</p><p class="text-xs mt-1">Hệ thống mở tab mới đến trang rút gọn.</p></div></div><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">2</div><div><p class="font-bold text-white">Xác thực & Chờ đợi</p><p class="text-xs mt-1">Tích vào "I'm not a robot" và chờ đếm ngược.</p></div></div><div class="flex gap-3"><div class="bg-slate-700 w-6 h-6 rounded-full flex items-center justify-center font-bold text-white shrink-0">3</div><div><p class="font-bold text-white">Lấy Mã & Nhập Thưởng</p><p class="text-xs mt-1">Copy mã 6 số, quay lại đây nhập để nhận 100 Xu.</p></div></div></div><div class="mt-6 text-center"><button onclick="closeGuide()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-lg font-bold w-full">Đã Hiểu</button></div></div></div>
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-4 rounded-xl shadow-2xl border-l-4 translate-y-32 opacity-0 transition-all duration-500 z-50 max-w-sm flex items-start gap-3"><div id="toastIcon" class="mt-1"></div><div><div id="toastTitle" class="font-bold text-sm"></div><div id="toastMsg" class="text-xs text-slate-300 mt-1"></div></div></div>
 
@@ -147,7 +145,7 @@
             });
         });
 
-        // --- CORE FUNCTION: MUA MÁY 2 BƯỚC ---
+        // --- MUA MÁY (Debug Mode) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -159,14 +157,13 @@
             if(!confirm("Mua máy với giá 50 Xu?")) return;
             
             const btn = document.getElementById('btnBuy');
-            const originalHTML = btn.innerHTML;
             btn.disabled = true; 
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Bước 1: Thanh toán...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Thanh toán...';
 
             let transId = null;
 
             try {
-                // BƯỚC 1: Gọi Server để TRỪ TIỀN và LẤY TOKEN
+                // BƯỚC 1: TRỪ TIỀN
                 const prepRes = await fetch('/api/prepare-buy', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -174,26 +171,18 @@
                 });
                 const prepData = await prepRes.json();
 
-                if(!prepData.success) {
-                    throw new Error(prepData.message || "Lỗi trừ tiền");
-                }
+                if(!prepData.success) throw new Error(prepData.message || "Lỗi trừ tiền");
 
-                // Lấy được Token và TransID
                 const token = prepData.temp_token;
                 transId = prepData.trans_id;
 
-                // BƯỚC 2: Gọi trực tiếp HoangCloud từ Browser (Client Side)
-                btn.innerHTML = '<i class="fa-solid fa-server"></i> Bước 2: Tạo máy...';
+                // BƯỚC 2: GỌI CLIENT (Có try-catch bắt lỗi chi tiết)
+                btn.innerHTML = '<i class="fa-solid fa-server"></i> Khởi tạo...';
                 
                 const cloudId = document.getElementById('cloudId').value;
                 const server = document.getElementById('serverRegion').value;
                 
-                const payload = { 
-                    user_token: token, 
-                    cloud_id: cloudId, 
-                    server: server, 
-                    input_data: inputData 
-                };
+                const payload = { user_token: token, cloud_id: cloudId, server: server, input_data: inputData };
 
                 const realRes = await fetch('https://hoang.cloud/dev/buy_device_cloud', {
                     method: 'POST',
@@ -210,40 +199,40 @@
                 }
 
             } catch (err) {
-                console.error(err);
+                console.error("Lỗi Mua Hàng Chi Tiết:", err);
                 
-                // NẾU LỖI: GỌI SERVER HOÀN TIỀN
+                // PHÂN TÍCH LỖI ĐỂ HIỆN THÔNG BÁO RÕ RÀNG
+                let friendlyError = err.message;
+                if (err.message === 'Failed to fetch') {
+                    friendlyError = "Lỗi CORS/Mạng: Trình duyệt chặn kết nối đến hoang.cloud. Hãy kiểm tra F12 Console.";
+                }
+
+                // NẾU CÓ TRANSID THÌ GỌI HOÀN TIỀN
                 if (transId) {
-                    btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Đang hoàn tiền...';
+                    btn.innerHTML = 'Đang hoàn tiền...';
                     try {
-                        const refundRes = await fetch('/api/refund', {
+                        await fetch('/api/refund', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ 
-                                uid: currentUser.uid, 
-                                trans_id: transId,
-                                error_reason: err.message
-                            })
+                            body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: friendlyError })
                         });
-                        const refundData = await refundRes.json();
-                        if(refundData.success) {
-                            showToast('Đã Hoàn Xu', 'Mua thất bại, đã hoàn lại 50 Xu.', 'warning');
-                        } else {
-                            showToast('Lỗi Nghiêm Trọng', 'Mua lỗi nhưng không hoàn được xu. Liên hệ Admin.', 'error');
-                        }
+                        
+                        // HIỆN HỘP THOẠI BÁO LỖI LỚN
+                        alert(`❌ MUA THẤT BẠI!\n\nLý do: ${friendlyError}\n\n✅ Đã hoàn lại 50 Xu vào tài khoản.`);
+                        
                     } catch (refundErr) {
-                        showToast('Lỗi Mạng', 'Không thể kết nối Server hoàn tiền.', 'error');
+                        alert(`❌ LỖI KÉP!\n\nMua thất bại (${friendlyError}) VÀ Hoàn tiền thất bại (Lỗi mạng).\nHãy báo Admin kiểm tra TransID: ${transId}`);
                     }
                 } else {
-                    showToast('Lỗi', err.message, 'error');
+                    showToast('Lỗi', friendlyError, 'error');
                 }
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = originalHTML;
+                btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)';
             }
         }
 
-        // ... Các hàm phụ trợ (openGuide, loginGoogle, generateLink...) giữ nguyên ...
+        // ... Các hàm khác giữ nguyên ...
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
         function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
