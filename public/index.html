@@ -6,11 +6,18 @@
     <title>Cloud VPS Shop</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <style>
-        @keyframes coin-pop { 0% { transform: scale(1); color: #FACC15; } 50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } 100% { transform: scale(1); color: #FACC15; } }
+        @keyframes coin-pop { 
+            0% { transform: scale(1); color: #FACC15; } 
+            50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } 
+            100% { transform: scale(1); color: #FACC15; } 
+        }
         .money-update { animation: coin-pop 0.5s ease-in-out; }
     </style>
 </head>
@@ -22,16 +29,22 @@
             <div class="font-black text-sky-500 text-xl tracking-tight flex items-center gap-2">
                 <i class="fa-solid fa-cloud"></i> CloudShop
             </div>
+            
             <div id="authBtn" class="hidden">
-                <button onclick="loginGoogle()" id="btnLogin" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-200 transition shadow-lg flex items-center gap-2"><i class="fa-brands fa-google text-red-500"></i> Đăng nhập</button>
+                <button onclick="loginGoogle()" id="btnLogin" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-200 transition shadow-lg flex items-center gap-2">
+                    <i class="fa-brands fa-google text-red-500"></i> Đăng nhập
+                </button>
             </div>
+
             <div id="userPanel" class="hidden flex items-center gap-3">
                 <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2" id="balanceContainer">
                     <i class="fa-solid fa-coins text-yellow-400"></i>
                     <span id="userBalance" class="font-bold text-yellow-400 text-sm transition-all">0</span>
                 </div>
                 <img id="userAvatar" src="" class="w-8 h-8 rounded-full border-2 border-slate-600">
-                <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-1"><i class="fa-solid fa-right-from-bracket"></i></button>
+                <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-1">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
             </div>
         </div>
     </nav>
@@ -48,7 +61,12 @@
         <div id="welcomeBanner" class="bg-gradient-to-r from-sky-600 to-indigo-700 rounded-2xl p-8 text-center shadow-xl hidden">
             <h1 class="text-2xl font-bold mb-2">Miễn Phí Cloud VPS & Device</h1>
             <p class="text-sky-100 mb-6 text-sm">Vượt link kiếm xu - Đổi máy tự động</p>
-            <button onclick="loginGoogle()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1"><i class="fa-brands fa-google"></i> Bắt đầu ngay</button>
+            <button onclick="loginGoogle()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                <i class="fa-brands fa-google"></i> Bắt đầu ngay
+            </button>
+            <div class="mt-6 p-2 bg-black/30 rounded border border-white/10 text-[10px] text-slate-400 inline-block">
+                Domain: <span id="currentDomain" class="text-yellow-400 font-mono font-bold">...</span>
+            </div>
         </div>
 
         <!-- Earn Section -->
@@ -57,9 +75,16 @@
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-link text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Vượt Link Ngắn</h3>
                 <p class="text-xs text-slate-400 mb-4">Nhận <span class="text-yellow-400 font-bold">100 Xu</span>/lượt. Tối đa 3 lượt/ngày.</p>
-                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg"><i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt</button>
-                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2"><i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn</button>
+                
+                <button onclick="generateLink()" id="btnGenLink" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 mb-2 shadow-lg">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Lấy Link Vượt
+                </button>
+
+                <button onclick="openGuide()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-xs font-bold transition border border-slate-600 flex justify-center items-center gap-2">
+                    <i class="fa-regular fa-circle-question"></i> Xem Hướng Dẫn
+                </button>
             </div>
+
             <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg relative overflow-hidden">
                 <div class="absolute top-0 right-0 p-3 opacity-10"><i class="fa-solid fa-barcode text-6xl"></i></div>
                 <h3 class="font-bold text-lg text-white mb-1">Nhập Mã Code</h3>
@@ -102,7 +127,10 @@
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">Dữ liệu cấu hình</label>
                     <textarea id="inputData" rows="3" class="w-full bg-slate-900 border border-slate-600 text-white rounded-lg p-3 text-sm font-mono focus:border-sky-500 outline-none" placeholder='{"token": "..."}'></textarea>
                 </div>
-                <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2"><i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)</button>
+                
+                <button onclick="buyDevice()" id="btnBuy" class="w-full bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition transform active:scale-[0.98] flex justify-center items-center gap-2">
+                    <i class="fa-solid fa-cart-plus"></i> Mua Ngay (50 Xu)
+                </button>
             </div>
         </div>
     </div>
@@ -119,6 +147,7 @@
         let currentUser = null, unsubscribeBalance = null, previousBalance = -1, toastTimeout = null;
 
         document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('currentDomain').innerText = window.location.hostname;
             auth.onAuthStateChanged(user => {
                 if (user) {
                     currentUser = user; toggleUI(true); document.getElementById('userAvatar').src = user.photoURL;
@@ -136,7 +165,7 @@
             });
         });
 
-        // --- MUA MÁY QUA PROXY WORKER (CODE MỚI) ---
+        // --- MUA MÁY QUA GOOGLE APPS SCRIPT (ĐÃ UPDATE) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -163,45 +192,32 @@
                 const prepData = await prepRes.json();
                 if(!prepData.success) throw new Error(prepData.message || "Lỗi trừ tiền");
 
-                const token = prepData.temp_token;
                 transId = prepData.trans_id;
 
-                // 2. GỌI WORKER
-                btn.innerHTML = '<i class="fa-solid fa-rocket"></i> Đang khởi tạo...';
+                // 2. GỌI SERVER GOOGLE (GAS)
+                btn.innerHTML = '<i class="fa-brands fa-google"></i> Đang khởi tạo...';
                 
-                // >>> DÁN LINK WORKER VÀO ĐÂY <<<
-                const WORKER_URL = 'https://ugphong.mailpayinap.workers.dev/'; 
+                // >>>>> URL GOOGLE SCRIPT ĐÃ ĐƯỢC CẬP NHẬT <<<<<
+                const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxIg5jjWG0YefrpeAHow7JTO-6whV9zsM-FpEtcKIOOEQRg1hDc34_ROftb3ebjesCJbQ/exec"; 
+                // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-                const payload = { 
-                    user_token: token, 
-                    cloud_id: document.getElementById('cloudId').value, 
-                    server: document.getElementById('serverRegion').value, 
-                    input_data: inputData 
-                };
+                if(GOOGLE_SCRIPT_URL.includes("AKfycbyQz...")) {
+                    throw new Error("Admin chưa dán link Google Script!");
+                }
 
-                const realRes = await fetch(WORKER_URL, {
+                // Dùng POST text/plain để tránh CORS preflight (Hack trick của Google Script)
+                const realRes = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain' }, 
+                    body: JSON.stringify({ 
+                        cloud_id: document.getElementById('cloudId').value, 
+                        server: document.getElementById('serverRegion').value, 
+                        input_data: inputData 
+                    })
                 });
                 
-                // XỬ LÝ KẾT QUẢ "THÔNG MINH"
-                // Dùng .text() trước để xem nó là JSON hay HTML lỗi
-                const textData = await realRes.text();
-                
-                let realData;
-                try {
-                    realData = JSON.parse(textData);
-                } catch (e) {
-                    // Nếu không parse được JSON, nghĩa là bị trả về HTML (Lỗi Block)
-                    // Thử trích xuất tiêu đề lỗi từ HTML
-                    let errorTitle = "Lỗi không xác định từ Proxy";
-                    const titleMatch = textData.match(/<title>(.*?)<\/title>/i);
-                    if (titleMatch && titleMatch[1]) {
-                        errorTitle = titleMatch[1]; // Ví dụ: "Just a moment..." hoặc "Access Denied"
-                    }
-                    throw new Error(`Proxy bị chặn: ${errorTitle}`);
-                }
+                const realData = await realRes.json();
 
                 if (realData.success) {
                     showToast('Thành Công', realData.message, 'success');
@@ -221,10 +237,7 @@
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: err.message })
                         });
-                        
-                        // HIỆN LỖI CHI TIẾT
                         alert(`❌ MUA THẤT BẠI!\n\nLý do: ${err.message}\n\n✅ Đã hoàn lại 50 Xu.`);
-                        
                     } catch (refundErr) {
                         alert(`❌ LỖI KÉP! Mua lỗi & Hoàn tiền lỗi. Báo Admin.`);
                     }
@@ -237,7 +250,7 @@
             }
         }
 
-        // ... Helpers ...
+        // ... Helpers (openGuide, loginGoogle, generateLink...) ...
         function openGuide() { document.getElementById('guideModal').classList.remove('hidden'); }
         function closeGuide(e) { if (!e || e.target.id === 'guideModal' || !e.target.closest('#guideModal .bg-slate-800')) document.getElementById('guideModal').classList.add('hidden'); }
         function loginGoogle() { const btn = document.getElementById('btnLogin'); if(btn) btn.innerHTML = '...'; const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(handleLoginError); }
