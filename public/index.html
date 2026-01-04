@@ -6,15 +6,40 @@
     <title>Cloud VPS Shop</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <style>
         @keyframes coin-pop { 0% { transform: scale(1); color: #FACC15; } 50% { transform: scale(1.5); color: #4ADE80; text-shadow: 0 0 10px #4ADE80; } 100% { transform: scale(1); color: #FACC15; } }
         .money-update { animation: coin-pop 0.5s ease-in-out; }
     </style>
+
+    <!-- Script bắt lỗi toàn cục (Tránh đen web) -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const box = document.getElementById('criticalError');
+            if(box) {
+                box.classList.remove('hidden');
+                document.getElementById('criticalErrorMsg').innerText = `${message} (Line: ${lineno})`;
+            }
+            console.error("Critical Error:", message);
+        };
+    </script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+    <!-- HỘP THOẠI BÁO LỖI CHẾT TRANG -->
+    <div id="criticalError" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-red-900 border-2 border-red-500 p-6 rounded-xl max-w-lg text-center">
+            <h1 class="text-2xl font-bold text-white mb-2">⚠️ WEB GẶP SỰ CỐ</h1>
+            <p class="text-red-200 mb-4">Có lỗi cú pháp khiến web không chạy được:</p>
+            <code id="criticalErrorMsg" class="block bg-black/50 p-3 rounded text-left font-mono text-sm text-red-400 mb-4">...</code>
+            <button onclick="window.location.reload()" class="bg-white text-red-900 px-6 py-2 rounded font-bold">Tải Lại Trang</button>
+        </div>
+    </div>
 
     <!-- Navbar -->
     <nav class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
@@ -23,20 +48,24 @@
                 <i class="fa-solid fa-cloud"></i> CloudShop
             </div>
             <div id="authBtn" class="hidden">
-                <button onclick="loginGoogle()" id="btnLogin" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-200 transition shadow-lg flex items-center gap-2"><i class="fa-brands fa-google text-red-500"></i> Đăng nhập</button>
+                <button onclick="loginGoogle()" id="btnLogin" class="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-200 transition shadow-lg flex items-center gap-2">
+                    <i class="fa-brands fa-google text-red-500"></i> Đăng nhập
+                </button>
             </div>
             <div id="userPanel" class="hidden flex items-center gap-3">
-                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2" id="balanceContainer">
+                <div class="bg-slate-900/50 px-3 py-1.5 rounded-full border border-yellow-500/30 flex items-center gap-2">
                     <i class="fa-solid fa-coins text-yellow-400"></i>
                     <span id="userBalance" class="font-bold text-yellow-400 text-sm transition-all">0</span>
                 </div>
                 <img id="userAvatar" src="" class="w-8 h-8 rounded-full border-2 border-slate-600">
-                <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-1"><i class="fa-solid fa-right-from-bracket"></i></button>
+                <button onclick="logout()" class="text-slate-400 hover:text-red-400 ml-1">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
             </div>
         </div>
     </nav>
 
-    <!-- Error Box -->
+    <!-- Error Toast Box -->
     <div id="errorBox" class="hidden max-w-4xl mx-auto m-4 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg shadow-lg">
         <h3 class="font-bold border-b border-red-400 pb-2 mb-2"><i class="fa-solid fa-bug"></i> BÁO LỖI</h3>
         <p id="errorMsg" class="font-mono text-xs break-all"></p>
@@ -48,7 +77,12 @@
         <div id="welcomeBanner" class="bg-gradient-to-r from-sky-600 to-indigo-700 rounded-2xl p-8 text-center shadow-xl hidden">
             <h1 class="text-2xl font-bold mb-2">Miễn Phí Cloud VPS & Device</h1>
             <p class="text-sky-100 mb-6 text-sm">Vượt link kiếm xu - Đổi máy tự động</p>
-            <button onclick="loginGoogle()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1"><i class="fa-brands fa-google"></i> Bắt đầu ngay</button>
+            <button onclick="loginGoogle()" class="bg-white text-indigo-600 px-6 py-3 rounded-full font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1">
+                <i class="fa-brands fa-google"></i> Bắt đầu ngay
+            </button>
+            <div class="mt-6 p-2 bg-black/30 rounded border border-white/10 text-[10px] text-slate-400 inline-block">
+                Domain: <span id="currentDomain" class="text-yellow-400 font-mono font-bold">...</span>
+            </div>
         </div>
 
         <!-- Earn Section -->
@@ -137,7 +171,7 @@
             });
         });
 
-        // --- CHIẾN THUẬT MUA MÁY "ĐA KÊNH" (MULTI-PROXY) ---
+        // --- MUA MÁY QUA SCRAPERAPI (FIXED) ---
         async function buyDevice() {
             if(!currentUser) return;
             const inputData = document.getElementById('inputData').value;
@@ -154,91 +188,69 @@
             let transId = null;
 
             try {
-                // 1. TRỪ TIỀN & LẤY TOKEN + KEY
+                // 1. TRỪ TIỀN
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Thanh toán...';
-                const prepRes = await fetch('/api/prepare-buy', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ uid: currentUser.uid }) });
+                const prepRes = await fetch('/api/prepare-buy', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ uid: currentUser.uid })
+                });
                 const prepData = await prepRes.json();
                 if(!prepData.success) throw new Error(prepData.message || "Lỗi trừ tiền");
 
                 const token = prepData.temp_token;
-                const scraperKey = prepData.scraper_key;
                 transId = prepData.trans_id;
 
-                const payload = { user_token: token, cloud_id: document.getElementById('cloudId').value, server: document.getElementById('serverRegion').value, input_data: inputData };
+                // 2. GỌI SCRAPERAPI
+                btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Đang khởi tạo...';
+                
+                const SCRAPER_KEY = '5a704f2a085016e5a6ffa9f6a3cbcd97'; 
                 const targetUrl = 'https://hoang.cloud/dev/buy_device_cloud';
+                // Dùng render=true để xuyên Cloudflare
+                const proxyUrl = `https://api.scraperapi.com/?api_key=${SCRAPER_KEY}&url=${encodeURIComponent(targetUrl)}&keep_headers=true&render=true`;
 
-                // --- DANH SÁCH PROXY (THỬ LẦN LƯỢT) ---
-                const proxies = [
-                    { 
-                        name: 'Kênh 1 (CodeTabs)', 
-                        url: 'https://api.codetabs.com/v1/proxy?quest=' + targetUrl 
-                    },
-                    { 
-                        name: 'Kênh 2 (CorsProxy)', 
-                        url: 'https://corsproxy.io/?' + encodeURIComponent(targetUrl) 
-                    },
-                    { 
-                        name: 'Kênh 3 (ScraperAPI VN)', 
-                        url: `https://api.scraperapi.com/?api_key=${scraperKey}&url=${encodeURIComponent(targetUrl)}&country_code=vn&device_type=desktop&keep_headers=true` 
-                    }
-                ];
+                const payload = { 
+                    user_token: token, 
+                    cloud_id: document.getElementById('cloudId').value, 
+                    server: document.getElementById('serverRegion').value, 
+                    input_data: inputData 
+                };
 
-                let success = false;
-                let successMsg = "";
-                let lastError = "";
-
-                // VÒNG LẶP THỬ PROXY
-                for (const proxy of proxies) {
-                    btn.innerHTML = `<i class="fa-solid fa-network-wired"></i> Thử ${proxy.name}...`;
-                    console.log(`Trying ${proxy.name}...`);
-                    
-                    try {
-                        const res = await fetch(proxy.url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const text = await res.text();
-                        console.log(`${proxy.name} Response:`, text.substring(0, 100));
-
-                        try {
-                            const json = JSON.parse(text);
-                            if (json.success) {
-                                success = true;
-                                successMsg = json.message;
-                                break; // Thành công -> Thoát ngay
-                            } else {
-                                // API trả về nhưng báo lỗi (vd: hết hàng) -> Không thử proxy khác nữa
-                                throw new Error(json.message || "Lỗi từ HoangCloud");
-                            }
-                        } catch (e) {
-                            // Không phải JSON -> Proxy bị chặn -> Thử cái tiếp theo
-                            lastError = `${proxy.name} bị chặn.`;
-                            continue;
-                        }
-                    } catch (err) {
-                        lastError = err.message;
-                        console.error(`${proxy.name} Failed:`, err);
-                    }
+                const realRes = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload)
+                });
+                
+                const textData = await realRes.text();
+                let realData;
+                try {
+                    realData = JSON.parse(textData);
+                } catch(e) {
+                    throw new Error(`Proxy Block: ${textData.substring(0, 100)}`);
                 }
 
-                if (success) {
-                    showToast('Thành Công', successMsg, 'success');
+                if (realData.success) {
+                    showToast('Thành Công', realData.message, 'success');
                 } else {
-                    throw new Error(lastError || "Tất cả kênh đều bị chặn.");
+                    throw new Error(realData.message || "Lỗi từ nhà cung cấp");
                 }
 
             } catch (err) {
                 console.error("Lỗi Mua Hàng:", err);
+                
                 // HOÀN TIỀN
                 if (transId) {
                     btn.innerHTML = 'Đang hoàn tiền...';
                     try {
-                        await fetch('/api/refund', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: err.message }) });
+                        await fetch('/api/refund', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ uid: currentUser.uid, trans_id: transId, error_reason: err.message })
+                        });
                         alert(`❌ MUA THẤT BẠI!\n\nLý do: ${err.message}\n\n✅ Đã hoàn lại 50 Xu.`);
                     } catch (refundErr) {
-                        alert(`❌ LỖI KÉP! Mua lỗi & Hoàn tiền lỗi.`);
+                        alert(`❌ LỖI KÉP! Mua lỗi & Hoàn tiền lỗi. Báo Admin.`);
                     }
                 } else {
                     showToast('Lỗi', err.message, 'error');
